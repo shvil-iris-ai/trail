@@ -470,26 +470,27 @@ function travelRow(prev,e,past){
   const url=gmUrl(prev,e);
   if(!e.travelMin){
     return `<div class="trow"><div class="mkcol"></div><div class="tr ${past?'past':''}">${md.icon}<span>${prev.isStay?'מהמלון · ':''}זמן הנסיעה לא הוזן${(hasLoc(prev)&&hasLoc(e)&&!isFlight(prev))?' · '+fmtKm(kmBetween(prev,e))+' בקו אווירי':''}</span>
-      <button class="gm" style="background:none;border:0;padding:0;font:inherit" data-act="travel" data-id="${e.id}" type="button">הוספת זמן</button>
+      <button class="gm" style="background:none;border:0;padding:0;font:inherit" data-act="travel" data-id="${e.id}" type="button">${e.travelNote?'פרטי המסלול והוספת זמן':'הוספת זמן'}</button>
       <a class="gm" href="${url}" target="_blank" rel="noopener">בדיקה ב-Google Maps</a></div></div>`;
   }
   const target=isFlight(e)?minusMin(e.time,e.airportBuffer||180):e.time;
   const leave=minusMin(target,e.travelMin);
   return `<div class="trow"><div class="mkcol"></div><div class="tr ${past?'past':''}">${md.icon}<span>${prev.isStay?'מהמלון · ':''}${md.name} · ${esc(e.travelMin)} דק׳${e.travelEst?' (משוער)':''}</span>${isFlight(e)?`<b>להגיע לשדה עד <span dir="ltr">${target}</span></b>`:''}<b>לצאת עד <span dir="ltr">${leave}</span></b>${(e.travelStale||(e.travelFrom!==undefined&&e.travelFrom!==prev.id))?'<b style="color:var(--red)">· לבדוק שוב, התחנה הקודמת השתנתה</b>':''}
-    <button class="gm" style="background:none;border:0;padding:0;font:inherit" data-act="travel" data-id="${e.id}" type="button">תיקון</button>
+    <button class="gm" style="background:none;border:0;padding:0;font:inherit" data-act="travel" data-id="${e.id}" type="button">${e.travelNote?'פרטי המסלול ותיקון':'תיקון'}</button>
     <a class="gm" href="${url}" target="_blank" rel="noopener">בדיקה ב-Google Maps</a></div></div>`;
 }
 function openTravel(id){
   let e=ev(id); if(!e)return;
   const prev=prevPoint(e);
   const opt=v=>`<option value="${v}" ${(e.travelMode||'walk')===v?'selected':''}>${MODE[v].name}</option>`;
-  openSheet(`<h3>זמן נסיעה</h3>
+  openSheet(`<h3>נסיעה</h3>
     <div class="m">${prev?esc(isFlight(prev)?(prev.toName||prev.toCode):prev.title)+' ← ':''}${esc(isFlight(e)?(e.fromName||e.fromCode):e.title)} · ${isFlight(e)?'להגיע לשדה עד <span dir="ltr">'+minusMin(e.time,e.airportBuffer||180)+'</span>':'מגיעים ב-<span dir="ltr">'+esc(e.time)+'</span>'}</div>
     <form id="trForm">
       <div class="pair">
         <label class="f">איך מגיעים<select name="travelMode" id="t_mode">${opt('walk')}${opt('transit')}${opt('car')}</select></label>
-        <label class="f">כמה דקות<input type="number" min="0" max="600" name="travelMin" id="t_min" value="${esc(e.travelMin)}" inputmode="numeric" required></label>
+        <label class="f">כמה דקות<input type="number" min="0" max="600" name="travelMin" id="t_min" value="${esc(e.travelMin)}" inputmode="numeric"></label>
       </div>
+      <label class="f">פרטי המסלול (קו ותחנות, מספר אוטובוס, דרך מועדפת וכדומה)<textarea name="travelNote" id="t_note" rows="3" placeholder="למשל: קו אדום מתחנת יהודית לאליפלט, 6 דקות. משם ברגל דרך רחוב יפת">${esc(e.travelNote||'')}</textarea></label>
       ${prev?`<p class="m" style="margin-top:.6rem">לא בטוחה? <a class="gm" id="t_gm" href="${gmUrl(prev,e)}" target="_blank" rel="noopener">בדיקה ב-Google Maps</a></p>`:''}
       <div class="btns" style="margin-top:1rem"><button class="b p" type="submit">שמירה</button></div>
     </form>`);
@@ -497,10 +498,13 @@ function openTravel(id){
   sel.onchange=()=>{if(gm&&prev){gm.href=gmUrl(prev,Object.assign({},e,{travelMode:sel.value}));}};
   document.getElementById('trForm').onsubmit=x=>{e=ev(id)||e;
     x.preventDefault();
-    e.travelMode=sel.value; e.travelMin=document.getElementById('t_min').value; e.travelEst=false; e.travelStale=false; e.travelFrom=prev?prev.id:null; e.updated=stamp();
+    const newMin=document.getElementById('t_min').value, minChanged=newMin!==String(e.travelMin||'')||sel.value!==e.travelMode;
+    e.travelMode=sel.value; e.travelMin=newMin; e.travelNote=document.getElementById('t_note').value;
+    if(minChanged){e.travelEst=false; e.travelStale=false; e.travelFrom=prev?prev.id:null;}
+    e.updated=stamp();
     save();closeSheet();render(true);
   };
-  setTimeout(()=>{const m=document.getElementById('t_min');if(m)m.focus();},50);
+  if(!e.travelMin)setTimeout(()=>{const m=document.getElementById('t_min');if(m)m.focus();},50);
 }
 
 function render(keepScroll){
@@ -599,7 +603,7 @@ function render(keepScroll){
     html+='</div></section>';
   });
   html+=`<div class="testline">${storageOK?'שמירה במכשיר פעילה ✓'+(lastSaved?' · נשמר '+lastSaved:''):'⚠ השמירה במכשיר לא זמינה בדפדפן הזה'} · ${esc(browserName())} · ${deviceHe()}
-    <br>נבנתה על ידי איריס, בעזרת Claude · גרסה 8<br><button class="reset" data-act="reset" type="button">איפוס לנתוני הדוגמה (לבדיקה בלבד)</button></div>`;
+    <br>נבנתה על ידי איריס, בעזרת Claude · גרסה 9<br><button class="reset" data-act="reset" type="button">איפוס לנתוני הדוגמה (לבדיקה בלבד)</button></div>`;
   document.getElementById('main').innerHTML=html;
   hydratePhotos(document.getElementById('main'));
   if(keepScroll)window.scrollTo(0,y);
@@ -945,9 +949,9 @@ function openDayNew(pos){
 }
 
 /* Contacts: copy name, address and phone from the phone's contact list (Chrome on Android only) */
-function contactsSupported(){return 'contacts' in navigator && 'ContactsManager' in window;}
+function contactsSupported(){return false;} /* set aside: on Samsung + Chrome the picker returns no contact */
 function contactBtn(nameId,addrId,phoneId){
-  if(!contactsSupported())return '<p class="locline" style="margin-top:.6rem">בחירה מאנשי הקשר זמינה רק בטלפון.</p>';
+  if(!contactsSupported())return '';
   return `<div class="btns"><button class="b" type="button" data-act="pickContact" data-n="${nameId}" data-a="${addrId}" data-p="${phoneId}">בחירה מאנשי הקשר</button></div><div class="saved" id="contactMsg"></div>`;
 }
 function addrText(a){
