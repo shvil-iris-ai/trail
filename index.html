@@ -143,6 +143,24 @@ a.b{display:flex;align-items:center;justify-content:center;text-decoration:none;
 .pop img{width:100%;max-width:12rem;border-radius:.4rem;display:block;margin-top:.3rem}
 .photoview img{max-width:100%;max-height:70vh;border-radius:.6rem}
 .reset{background:none;border:0;color:var(--ink-soft);text-decoration:underline;font:inherit;font-size:.7rem;cursor:pointer}
+.stayrow{margin-top:.7rem;background:var(--white);border:2px solid var(--lilac);border-radius:1rem;padding:.6rem .7rem;display:flex;flex-direction:column;gap:.35rem}
+.stayrow .top{display:flex;align-items:center;gap:.5rem;background:none;border:0;padding:0;text-align:right;color:var(--ink);font:inherit;cursor:pointer}
+.stayrow .top svg{width:1.6rem;height:1.6rem;flex:none}
+.stayrow .t{font-weight:700;font-size:1.05rem;line-height:1.2}
+.stayrow .m{font-size:.8rem;color:var(--ink-soft)}
+.stayrow .btns{margin-top:0}
+.stayrow .b{min-height:2.2rem;font-size:.85rem}
+.vstop{background:rgba(255,255,255,.92);border:1.5px dashed var(--purple);border-radius:.7rem;padding:.35rem .6rem;text-align:right;color:var(--ink);display:flex;align-items:center;gap:.45rem;font:inherit;cursor:pointer;min-width:0}
+.vstop svg{width:1.3rem;height:1.3rem;flex:none}
+.vstop .t{font-weight:700;font-size:.95rem}
+.vstop .m{font-size:.8rem;color:var(--ink-soft)}
+.stop .ico{display:inline-flex;vertical-align:-.15em;margin-inline-end:.3rem}
+.stop .ico svg{width:1.05rem;height:1.05rem}
+.finfo{display:grid;grid-template-columns:auto 1fr;gap:.2rem .7rem;background:var(--paper);border-radius:.8rem;padding:.6rem .7rem;margin-top:.6rem;font-size:.9rem}
+.finfo dt{color:var(--ink-soft)}.finfo dd{margin:0;font-weight:600}
+.chooser{display:flex;flex-direction:column;gap:.5rem;margin-top:.8rem}
+.chooser .b{min-height:3.2rem;font-size:1rem;justify-content:flex-start;display:flex;align-items:center;gap:.6rem;padding:0 1rem}
+.chooser svg{width:1.4rem;height:1.4rem}
 .driver{position:fixed;inset:0;z-index:30;background:var(--white);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:1rem;padding:2rem 1.2rem;text-align:center}
 .driver[hidden]{display:none}
 .driver .big{font-size:2.6rem;font-weight:700;line-height:1.1;direction:ltr}
@@ -172,6 +190,10 @@ const BAND={
   city:'<svg viewBox="0 0 260 92" aria-hidden="true"><circle cx="40" cy="28" r="15" fill="#EFC12E"/><path d="M80 92 V60 H190 V92 Z" fill="#4A86D8"/><path d="M90 60 A45 36 0 0 1 180 60 Z" fill="#1E4E8C"/><rect x="90" y="66" width="8" height="26" fill="#A9C9F2"/><rect x="112" y="66" width="8" height="26" fill="#A9C9F2"/><rect x="150" y="66" width="8" height="26" fill="#A9C9F2"/><rect x="172" y="66" width="8" height="26" fill="#A9C9F2"/></svg>',
   nature:'<svg viewBox="0 0 260 92" aria-hidden="true"><circle cx="200" cy="26" r="14" fill="#EFC12E"/><path d="M0 70 C 60 40, 120 64, 180 46 S 240 50, 260 56 V92 H0 Z" fill="#A87CD8"/><path d="M0 84 C 70 64, 140 86, 200 70 S 250 72, 260 76 V92 H0 Z" fill="#6B3FA0"/><rect x="40" y="58" width="22" height="16" fill="#FCFBFD"/><path d="M37 58 L51 48 L65 58 Z" fill="#C82A4C"/></svg>'
 };
+const PLANE='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15.5v-1.7l-8-5V3.6a1.4 1.4 0 0 0-2.8 0v5.2l-8 5v1.7l8-2.5v4.6l-2 1.5v1.4l3.4-1 3.4 1v-1.4l-2-1.5V13z" fill="#6B3FA0"/></svg>';
+const BED='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18V7M3 14h18v4M21 14v-2.5A2.5 2.5 0 0 0 18.5 9H11v5" fill="none" stroke="#6B3FA0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="11" r="1.8" fill="#6B3FA0"/></svg>';
+const PIN='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z" fill="none" stroke="#6B3FA0" stroke-width="2"/><circle cx="12" cy="10" r="2.5" fill="#6B3FA0"/></svg>';
+const FLIGHT_BAND='<svg viewBox="0 0 260 92" aria-hidden="true"><circle cx="40" cy="28" r="15" fill="#EFC12E"/><path d="M60 70 C 110 40, 170 40, 230 20" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round"/><g transform="translate(205 10) rotate(60 12 12)"><path d="M21 15.5v-1.7l-8-5V3.6a1.4 1.4 0 0 0-2.8 0v5.2l-8 5v1.7l8-2.5v4.6l-2 1.5v1.4l3.4-1 3.4 1v-1.4l-2-1.5V13z" fill="#4A2063"/></g></svg>';
 const MODE={
   walk:{name:'ברגל',gm:'walking',icon:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="13" cy="4" r="2" fill="#6B3FA0"/><path d="M12 7l-3 4 2 2v7M12 7l3 5h3M11 13l-3 7" fill="none" stroke="#6B3FA0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'},
   car:{name:'ברכב',gm:'driving',icon:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15l2-6h12l2 6v3H4z" fill="none" stroke="#6B3FA0" stroke-width="2" stroke-linejoin="round"/><circle cx="8" cy="18" r="1.8" fill="#6B3FA0"/><circle cx="16" cy="18" r="1.8" fill="#6B3FA0"/></svg>'},
@@ -249,8 +271,25 @@ function sample(){
 }
 
 function prevActive(e){const act=eventsOf(e.date).filter(v=>v.status!=='cancelled'),i=act.indexOf(e);return i>0?act[i-1]:null;}
+function dayDiff(a,b){const[y1,m1,d1]=a.split('-').map(Number),[y2,m2,d2]=b.split('-').map(Number);return Math.round((Date.UTC(y2,m2-1,d2)-Date.UTC(y1,m1-1,d1))/86400000);}
+function shiftDate(ds,n){const[y,m,d]=ds.split('-').map(Number);return iso(new Date(y,m-1,d+n));}
+/* Sample flight and stays, added once so the new features can be tried on existing data */
+function addSampleExtras(){
+  const days=sortedDays(); if(!days.length)return;
+  const d0=days[0].date, last=days[days.length-1].date;
+  const rOut=days[Math.min(2,days.length-1)].date===d0?shiftDate(d0,1):days[Math.min(2,days.length-1)].date;
+  data.stays.push({id:'s'+uid(),name:'מלון ליד פיאצה נבונה (דוגמה)',local:'Hotel',address:'Piazza Navona, Roma',phone:'+39 06 0000 0000',lat:41.8992,lng:12.4731,
+    checkinDate:d0,checkinTime:'15:00',checkoutDate:rOut,checkoutTime:'11:00',booking:'HTL-12345',cancelPolicy:'ביטול בחינם עד 48 שעות לפני (דוגמה)',notes:'ארוחת בוקר 7:00–10:00',updated:stamp()});
+  if(days.length>2)data.stays.push({id:'s'+uid(),name:'אגרוטוריזמו בטוסקנה (דוגמה)',local:'Agriturismo',address:'Pienza, Toscana',phone:'+39 0578 000 000',lat:43.0800,lng:11.6700,
+    checkinDate:days[2].date,checkinTime:'16:00',checkoutDate:shiftDate(last,1),checkoutTime:'10:30',booking:'AGR-777',cancelPolicy:'',notes:'ארוחת ערב משפחתית בהזמנה מראש',updated:stamp()});
+  data.events.push({id:uid(),kind:'flight',date:d0,time:'06:00',title:'TLV ← FCO',local:'נמל התעופה בן גוריון',address:'נמל התעופה בן גוריון',lat:32.0055,lng:34.8854,
+    airline:'חברת דוגמה',flightNo:'XX 101',fromCode:'TLV',fromName:'נמל התעופה בן גוריון',terminal:'3',toCode:'FCO',toName:'Aeroporto di Fiumicino',toLat:41.8003,toLng:12.2389,
+    arrTime:'09:15',arrPlusDays:'0',airportBuffer:'180',booking:'ABC123',seat:'14A',baggage:'מזוודה אחת עד 23 ק״ג',
+    details:'',bgShort:'',bgMore:'',sources:'',status:d0<iso(new Date())?'done':'planned',note:'',travelMode:'car',travelMin:'30',travelEst:true,photos:[],updated:stamp()});
+}
 function normalize(){
   if(!Array.isArray(data.alternatives))data.alternatives=defaultAlts();
+  if(!Array.isArray(data.stays)){data.stays=[];addSampleExtras();}
   data.days.forEach(d=>{if(d.updated===undefined)d.updated=stamp();if(d.exported===undefined)d.exported='';});
   data.events.forEach(e=>{if(!Array.isArray(e.photos))e.photos=[];});
   data.events.forEach(e=>{if(e.travelMin&&e.travelFrom===undefined&&e.status!=='cancelled'){const p=prevActive(e);e.travelFrom=(e.travelStale||(p&&p.updated>e.updated))?null:(p?p.id:null);}});
@@ -262,7 +301,7 @@ function load(){
     const s=localStorage.getItem(KEY);
     if(s){data=JSON.parse(s);normalize();return;}
   }catch(e){storageOK=false;}
-  data=sample();
+  data=sample();normalize();
 }
 function save(){
   try{localStorage.setItem(KEY,JSON.stringify(data));storageOK=true;lastSaved=nowHM();}
@@ -292,21 +331,42 @@ function browserName(){
   return 'דפדפן אחר';
 }
 
+function isFlight(e){return e&&e.kind==='flight';}
+function stayForNight(ds){return data.stays.find(s=>s.checkinDate<=ds&&ds<s.checkoutDate)||null;}
+function morningStay(ds){return stayForNight(shiftDate(ds,-1));}
+function stayById(sid){return data.stays.find(s=>s.id===sid);}
+function stayPoint(s){return {id:'stay:'+s.id,title:s.name,local:s.local,address:s.address,lat:s.lat,lng:s.lng,isStay:true};}
+function prevPoint(e){const p=prevActive(e);if(p)return p;const s=morningStay(e.date);return s?stayPoint(s):null;}
+/* A flight starts at the departure airport and ends at the arrival airport */
+function pt(x,role){
+  if(isFlight(x)){
+    if(role==='origin')return (x.toLat!==undefined&&x.toLat!==''&&x.toLat!==null)?(x.toLat+','+x.toLng):(x.toName||x.toCode||'');
+    return hasLoc(x)?(x.lat+','+x.lng):(x.fromName||x.fromCode||'');
+  }
+  return point(x);
+}
+function stopTitle(e){return isFlight(e)?`${e.fromCode||''} ← ${e.toCode||''} · ${e.flightNo||''}`:e.title;}
+function stopMeta(e){
+  if(isFlight(e))return `המראה <span dir="ltr">${esc(e.time)}</span> · נחיתה <span dir="ltr">${esc(e.arrTime||'')}</span>${+e.arrPlusDays?' (+1)':''} · שעון מקומי<br>להגיע לשדה עד <span dir="ltr">${minusMin(e.time,e.airportBuffer||180)}</span>`;
+  return `<span dir="ltr">${esc(e.time)}</span> · ${esc(e.local)}`;
+}
+function hasLoc(x){return x&&x.lat!==undefined&&x.lat!==null&&x.lat!=='';}
 function point(e){return (e.lat!==undefined&&e.lat!==null&&e.lat!=='')?(e.lat+','+e.lng):(e.address||e.local||e.title);}
 function gmUrl(prev,e){
   const md=MODE[e.travelMode]||MODE.walk;
-  return 'https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(point(prev))+'&destination='+encodeURIComponent(point(e))+'&travelmode='+md.gm;
+  return 'https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(pt(prev,'origin'))+'&destination='+encodeURIComponent(pt(e,'dest'))+'&travelmode='+md.gm;
 }
 /* Google Maps links accept an origin, a destination and up to 9 stops between them, so longer days are split into parts */
 function dayRouteLinks(day,evs){
-  const stops=evs.filter(e=>e.status!=='cancelled');
+  const ms=morningStay(day.date), ns=stayForNight(day.date);
+  const stops=[...(ms?[stayPoint(ms)]:[]),...evs.filter(e=>e.status!=='cancelled'),...(ns?[stayPoint(ns)]:[])];
   if(stops.length<2)return '';
   const mode=day.type==='nature'?'driving':'walking';
   const parts=[];let i=0;
   while(i<stops.length-1){const chunk=stops.slice(i,i+11);parts.push(chunk);i+=chunk.length-1;}
   return parts.map((c,k)=>{
-    const url='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(point(c[0]))+'&destination='+encodeURIComponent(point(c[c.length-1]))
-      +(c.length>2?'&waypoints='+c.slice(1,-1).map(e=>encodeURIComponent(point(e))).join('%7C'):'')+'&travelmode='+mode;
+    const url='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(pt(c[0],'origin'))+'&destination='+encodeURIComponent(pt(c[c.length-1],'dest'))
+      +(c.length>2?'&waypoints='+c.slice(1,-1).map(e=>encodeURIComponent(pt(e,'dest'))).join('%7C'):'')+'&travelmode='+mode;
     return `<a class="b" href="${url}" target="_blank" rel="noopener">${parts.length>1?'מסלול ב-Google Maps, חלק '+(k+1):'המסלול של היום ב-Google Maps'}</a>`;
   }).join('');
 }
@@ -355,21 +415,22 @@ function travelRow(prev,e,past){
   const md=MODE[e.travelMode]||MODE.walk;
   const url=gmUrl(prev,e);
   if(!e.travelMin){
-    return `<div class="trow"><div class="mkcol"></div><div class="tr ${past?'past':''}">${md.icon}<span>זמן הנסיעה לא הוזן</span>
+    return `<div class="trow"><div class="mkcol"></div><div class="tr ${past?'past':''}">${md.icon}<span>${prev.isStay?'מהמלון · ':''}זמן הנסיעה לא הוזן${(hasLoc(prev)&&hasLoc(e)&&!isFlight(prev))?' · '+fmtKm(kmBetween(prev,e))+' בקו אווירי':''}</span>
       <button class="gm" style="background:none;border:0;padding:0;font:inherit" data-act="travel" data-id="${e.id}" type="button">הוספת זמן</button>
       <a class="gm" href="${url}" target="_blank" rel="noopener">בדיקה ב-Google Maps</a></div></div>`;
   }
-  const leave=minusMin(e.time,e.travelMin);
-  return `<div class="trow"><div class="mkcol"></div><div class="tr ${past?'past':''}">${md.icon}<span>${md.name} · ${esc(e.travelMin)} דק׳${e.travelEst?' (משוער)':''}</span><b>לצאת עד <span dir="ltr">${leave}</span></b>${(e.travelStale||(e.travelFrom!==undefined&&e.travelFrom!==prev.id))?'<b style="color:var(--red)">· לבדוק שוב, התחנה הקודמת השתנתה</b>':''}
+  const target=isFlight(e)?minusMin(e.time,e.airportBuffer||180):e.time;
+  const leave=minusMin(target,e.travelMin);
+  return `<div class="trow"><div class="mkcol"></div><div class="tr ${past?'past':''}">${md.icon}<span>${prev.isStay?'מהמלון · ':''}${md.name} · ${esc(e.travelMin)} דק׳${e.travelEst?' (משוער)':''}</span>${isFlight(e)?`<b>להגיע לשדה עד <span dir="ltr">${target}</span></b>`:''}<b>לצאת עד <span dir="ltr">${leave}</span></b>${(e.travelStale||(e.travelFrom!==undefined&&e.travelFrom!==prev.id))?'<b style="color:var(--red)">· לבדוק שוב, התחנה הקודמת השתנתה</b>':''}
     <button class="gm" style="background:none;border:0;padding:0;font:inherit" data-act="travel" data-id="${e.id}" type="button">תיקון</button>
     <a class="gm" href="${url}" target="_blank" rel="noopener">בדיקה ב-Google Maps</a></div></div>`;
 }
 function openTravel(id){
   const e=ev(id); if(!e)return;
-  const evs=eventsOf(e.date).filter(v=>v.status!=='cancelled'), i=evs.indexOf(e), prev=i>0?evs[i-1]:null;
+  const prev=prevPoint(e);
   const opt=v=>`<option value="${v}" ${(e.travelMode||'walk')===v?'selected':''}>${MODE[v].name}</option>`;
   openSheet(`<h3>זמן נסיעה</h3>
-    <div class="m">${prev?esc(prev.title)+' ← ':''}${esc(e.title)} · מגיעים ב-<span dir="ltr">${esc(e.time)}</span></div>
+    <div class="m">${prev?esc(isFlight(prev)?(prev.toName||prev.toCode):prev.title)+' ← ':''}${esc(isFlight(e)?(e.fromName||e.fromCode):e.title)} · ${isFlight(e)?'להגיע לשדה עד <span dir="ltr">'+minusMin(e.time,e.airportBuffer||180)+'</span>':'מגיעים ב-<span dir="ltr">'+esc(e.time)+'</span>'}</div>
     <form id="trForm">
       <div class="pair">
         <label class="f">איך מגיעים<select name="travelMode" id="t_mode">${opt('walk')}${opt('transit')}${opt('car')}</select></label>
@@ -410,15 +471,26 @@ function render(keepScroll){
         <h2>${esc(day.title)}</h2>
         <div class="sub">${active.length} תחנות${doneN?' · '+doneN+' מאחורייך':''}${day.sub?' · '+esc(day.sub):''}</div>
       </div>${SUN}</header><div class="daybody"><div class="trail">`;
-    let n=0,prev=null;
-    evs.forEach(e=>{
+    let n=0,prev=morningStay(day.date)?stayPoint(morningStay(day.date)):null;
+    const items=evs.map(e=>({t:e.time,e}));
+    data.stays.forEach(st=>{
+      if(st.checkoutDate===day.date)items.push({t:st.checkoutTime||'11:00',stay:st,kind:'out'});
+      if(st.checkinDate===day.date)items.push({t:st.checkinTime||'15:00',stay:st,kind:'in'});
+    });
+    items.sort((a,b)=>a.t.localeCompare(b.t)||((a.stay?(a.kind==='out'?-1:1):0)-(b.stay?(b.kind==='out'?-1:1):0)));
+    items.forEach(it=>{
+      if(it.stay){
+        html+=`<div class="row"><div class="mkcol"></div><button class="vstop" data-act="stay" data-sid="${it.stay.id}" type="button">${BED}<span><span class="t">${it.kind==='in'?'צ׳ק-אין':'צ׳ק-אאוט עד'} <span dir="ltr">${esc(it.t)}</span></span><br><span class="m">${esc(it.stay.name)}</span></span></button></div>`;
+        return;
+      }
+      const e=it.e;
       const num=e.status==='cancelled'?'':String(++n);
       html+=travelRow(prev,e,pastDay||e.status==='done');
       if(e===cur){
         html+=`<div class="row" id="curRow"><div class="mkcol"><div class="mk cur">${num}</div></div>
-          <section class="card">${e.photos.length?`<div class="band photo">${photoImg(e.photos[e.photos.length-1])}</div>`:`<div class="band">${BAND[day.type]||BAND.city}</div>`}<div class="body">
-            <div class="lbl">${esc(curLbl)}<span dir="ltr">${esc(e.time)}</span></div>
-            <div class="t">${esc(e.title)}</div><div class="m">${esc(e.local)}</div>
+          <section class="card">${e.photos.length?`<div class="band photo">${photoImg(e.photos[e.photos.length-1])}</div>`:`<div class="band">${isFlight(e)?FLIGHT_BAND:(BAND[day.type]||BAND.city)}</div>`}<div class="body">
+            <div class="lbl">${esc(curLbl)}<span dir="ltr">${esc(e.time)}</span>${isFlight(e)?' · להגיע לשדה עד <span dir="ltr">'+minusMin(e.time,e.airportBuffer||180)+'</span>':''}</div>
+            <div class="t">${esc(stopTitle(e))}</div><div class="m">${isFlight(e)?stopMeta(e):esc(e.local)}</div>
             <div class="btns">
               <button class="b p" data-act="details" data-id="${e.id}" type="button">פרטים</button>
               <button class="b" data-act="driver" data-id="${e.id}" type="button">לנהג</button>
@@ -430,7 +502,7 @@ function render(keepScroll){
         const tag=e.status==='cancelled'?`<span class="tag cancel">${e.replacedBy?'הוחלף':'בוטל'}</span>`:unmarked.has(e.id)?'<span class="tag" style="background:#EEE9F4;color:var(--ink-soft)">השעה עברה · לא סומן</span>':e.replaces?'<span class="tag changed">חלופה</span>':e.status==='changed'?'<span class="tag changed">השתנה</span>':'';
         html+=`<div class="row"><div class="mkcol">${mk}</div>
           <button class="stop ${cls}" data-act="details" data-id="${e.id}" type="button">
-            <span class="t">${esc(e.title)}</span><span class="m"><span dir="ltr">${esc(e.time)}</span> · ${esc(e.local)}${e.photos.length?' · '+e.photos.length+(e.photos.length===1?' תמונה':' תמונות'):''}</span>${tag}</button></div>`;
+            <span class="t">${isFlight(e)?'<span class="ico">'+PLANE+'</span>':''}${esc(stopTitle(e))}</span><span class="m">${stopMeta(e)}${e.photos.length?' · '+e.photos.length+(e.photos.length===1?' תמונה':' תמונות'):''}</span>${tag}</button></div>`;
       }
       if(e.status!=='cancelled')prev=e;
     });
@@ -441,6 +513,13 @@ function render(keepScroll){
         <div class="btns"><button class="b p" data-act="summary" data-date="${day.date}" type="button">כתיבת סיכום היום</button></div></section></div>`;
     }
     html+='</div>';
+    const night=stayForNight(day.date);
+    if(night){
+      const tot=dayDiff(night.checkinDate,night.checkoutDate), k=dayDiff(night.checkinDate,day.date)+1;
+      html+=`<section class="stayrow"><button class="top" data-act="stay" data-sid="${night.id}" type="button">${BED}<span><span class="t">לינה: ${esc(night.name)}</span><br><span class="m">לילה ${k} מתוך ${tot}${night.address?' · '+esc(night.address):''}</span></span></button>
+        <div class="btns"><button class="b" data-act="stayDriver" data-sid="${night.id}" type="button">הצגה לנהג</button>
+        <a class="b" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(pt(stayPoint(night)))}" target="_blank" rel="noopener">ניווט למלון</a></div></section>`;
+    }
     const altN=data.alternatives.filter(a=>a.city===dayCity(day)&&!a.used).length;
     html+=`<div class="dayactions">${dayRouteLinks(day,evs)}<button class="b p" data-act="dayMap" data-date="${day.date}" type="button">מפת היום</button>
       ${altN?`<button class="b" data-act="alts" data-date="${day.date}" type="button">חלופות ב${esc(dayCity(day))} (${altN})</button>`:''}</div>`;
@@ -451,7 +530,7 @@ function render(keepScroll){
     html+=`<section class="summary"><h3>סיכום היום</h3>${day.summary?`<div class="txt">${esc(day.summary)}</div>`:'<div class="empty">עוד לא נכתב סיכום ליום הזה.</div>'}
       <div class="btns"><button class="b" data-act="summary" data-date="${day.date}" type="button">${day.summary?'עריכת הסיכום':'כתיבת סיכום'}</button>
       <button class="b" data-act="exportDay" data-date="${day.date}" type="button">ייצוא היום הזה</button></div>${exp}</section>`;
-    html+=`<button class="b add" data-act="add" data-date="${day.date}" type="button">+ הוספת תחנה ליום הזה</button>`;
+    html+=`<button class="b add" data-act="add" data-date="${day.date}" type="button">+ הוספה ליום הזה: תחנה, טיסה או לינה</button>`;
     if(i===days.length-1){
       html+=`<section class="alltrip"><h3 style="margin:0;font-size:1rem;color:var(--purple-dark)">סוף הטיול</h3>
         <p class="m" style="margin:.2rem 0;color:var(--ink-soft);font-size:.85rem">קובץ אחד עם כל הימים, בשביל ספר הזיכרונות.</p>
@@ -500,8 +579,18 @@ function closeSheet(){sheet.hidden=true;panel.innerHTML='';}
 function openDetails(id){
   const e=ev(id); if(!e)return;
   const st=s=>`<button class="b ${e.status===s?'on':''}" data-act="status" data-id="${e.id}" data-st="${s}" type="button">${{done:'היה',cancelled:'בוטל',changed:'השתנה'}[s]}</button>`;
-  openSheet(`<h3>${esc(e.title)}</h3>
-    <div class="m">${esc(e.local)} · <span dir="ltr">${esc(e.time)}</span> · ${esc(dayLabel(e.date))}</div>
+  const fl=isFlight(e)?`<dl class="finfo">
+      <dt>טיסה</dt><dd>${esc(e.airline||'')} · <span dir="ltr">${esc(e.flightNo||'')}</span></dd>
+      <dt>המראה</dt><dd>${esc(e.fromName||e.fromCode||'')}${e.terminal?' · טרמינל '+esc(e.terminal):''} · <span dir="ltr">${esc(e.time)}</span></dd>
+      <dt>נחיתה</dt><dd>${esc(e.toName||e.toCode||'')} · <span dir="ltr">${esc(e.arrTime||'')}</span>${+e.arrPlusDays?' (למחרת)':''} שעון מקומי</dd>
+      <dt>להגיע לשדה עד</dt><dd><span dir="ltr">${minusMin(e.time,e.airportBuffer||180)}</span> (${Math.round((+e.airportBuffer||180)/60*10)/10} שעות לפני)</dd>
+      ${e.booking?`<dt>קוד הזמנה</dt><dd dir="ltr" style="text-align:right">${esc(e.booking)}</dd>`:''}
+      ${e.seat?`<dt>מושב</dt><dd dir="ltr" style="text-align:right">${esc(e.seat)}</dd>`:''}
+      ${e.baggage?`<dt>מזוודות</dt><dd>${esc(e.baggage)}</dd>`:''}
+    </dl>
+    <div class="btns"><a class="b" href="https://www.google.com/search?q=${encodeURIComponent((e.flightNo||'')+' flight status')}" target="_blank" rel="noopener">בדיקת סטטוס הטיסה</a></div>`:'';
+  openSheet(`<h3>${isFlight(e)?'<span class="ico" style="display:inline-flex;width:1.3rem;margin-inline-end:.3rem">'+PLANE+'</span>':''}${esc(stopTitle(e))}</h3>
+    <div class="m">${isFlight(e)?'':esc(e.local)+' · '}<span dir="ltr">${esc(e.time)}</span> · ${esc(dayLabel(e.date))}</div>${fl}
     ${e.address?`<p class="m">מיקום: <span dir="ltr">${esc(e.address)}</span></p>`:''}
     ${e.details?`<p>${esc(e.details)}</p>`:''}
     <div class="btns">${st('done')}${st('changed')}${st('cancelled')}</div>
@@ -524,7 +613,7 @@ function openDetails(id){
     ${e.sources?`<div class="src">${esc(e.sources)}</div>`:''}
     <div class="btns" style="margin-top:1rem">
       <button class="b" data-act="driver" data-id="${e.id}" type="button">הצגה לנהג</button>
-      <button class="b" data-act="edit" data-id="${e.id}" type="button">עריכה</button>
+      <button class="b" data-act="${isFlight(e)?'editFlight':'edit'}" data-id="${e.id}" type="button">עריכה</button>
     </div>`);
   hydratePhotos(panel);
 }
@@ -643,7 +732,7 @@ function openEdit(id,date){
     if(id){
       const travelChanged=f.travelMin!==String(e.travelMin)||f.travelMode!==e.travelMode;
       const oldDate=e.date;
-      Object.assign(e,f,{updated:stamp()}); if(travelChanged){e.travelEst=false;e.travelStale=false;const p=prevActive(e);e.travelFrom=p?p.id:null;}
+      Object.assign(e,f,{updated:stamp()}); if(travelChanged){e.travelEst=false;e.travelStale=false;const p=prevPoint(e);e.travelFrom=p?p.id:null;}
       touchDay(oldDate);
     }else{
       data.events.push(Object.assign({id:uid(),sources:'',status:'planned',note:'',travelEst:false,photos:[],updated:stamp()},f));
@@ -660,8 +749,128 @@ function openSummary(ds){
     <div class="saved" id="sumSaved">הסיכום נשמר אוטומטית תוך כדי כתיבה</div>`);
 }
 
+function showDriver(big,addr,he){
+  driver.innerHTML=`<div class="big">${esc(big)}</div>${addr?`<div class="addr">${esc(addr)}</div>`:''}<div class="he">${esc(he)}</div>
+    <button class="b p" data-act="closeDriver" type="button" style="flex:none;min-width:10rem">סגירה</button>`;
+  driver.hidden=false;
+}
+
+/* Add: choose what kind of item */
+function openAddChooser(ds){
+  openSheet(`<h3>מה להוסיף?</h3><div class="m">${esc(dayLabel(ds))}</div>
+    <div class="chooser">
+      <button class="b" data-act="addStop" data-date="${ds}" type="button">${PIN}<span>תחנה</span></button>
+      <button class="b" data-act="addFlight" data-date="${ds}" type="button">${PLANE}<span>טיסה</span></button>
+      <button class="b" data-act="addStay" data-date="${ds}" type="button">${BED}<span>לינה</span></button>
+    </div>`);
+}
+
+/* Flights */
+function openFlightEdit(id,date){
+  const e=id?ev(id):{date,time:'06:00',airline:'',flightNo:'',fromCode:'',fromName:'',terminal:'',toCode:'',toName:'',arrTime:'',arrPlusDays:'0',airportBuffer:'180',booking:'',seat:'',baggage:'',travelMode:'car',travelMin:''};
+  const mo=v=>`<option value="${v}" ${(e.travelMode||'car')===v?'selected':''}>${MODE[v].name}</option>`;
+  openSheet(`<h3>${id?'עריכת טיסה':'טיסה חדשה'}</h3>
+    <p class="locline">כל שעה לפי השעון המקומי במקום שלה: ההמראה לפי שדה ההמראה, והנחיתה לפי שדה הנחיתה.</p>
+    <form id="flForm">
+      <div class="pair"><label class="f">חברת תעופה<input name="airline" id="fl_airline" value="${esc(e.airline)}"></label>
+        <label class="f">מספר טיסה<input name="flightNo" id="fl_no" value="${esc(e.flightNo)}" dir="ltr" required></label></div>
+      <div class="pair"><label class="f">תאריך המראה<input type="date" name="date" id="fl_date" value="${esc(e.date)}" required></label>
+        <label class="f">שעת המראה<input type="time" name="time" id="fl_time" value="${esc(e.time)}" required></label></div>
+      <div class="pair"><label class="f">שדה המראה (קוד)<input name="fromCode" id="fl_fromCode" value="${esc(e.fromCode)}" dir="ltr" placeholder="TLV"></label>
+        <label class="f">טרמינל<input name="terminal" id="fl_terminal" value="${esc(e.terminal)}" dir="ltr"></label></div>
+      <label class="f">שם שדה ההמראה<input name="fromName" id="fl_fromName" value="${esc(e.fromName)}"></label>
+      <div class="pair"><label class="f">שדה נחיתה (קוד)<input name="toCode" id="fl_toCode" value="${esc(e.toCode)}" dir="ltr" placeholder="FCO"></label>
+        <label class="f">שעת נחיתה<input type="time" name="arrTime" id="fl_arr" value="${esc(e.arrTime)}" required></label></div>
+      <label class="f">שם שדה הנחיתה<input name="toName" id="fl_toName" value="${esc(e.toName)}"></label>
+      <div class="pair"><label class="f">נחיתה באותו יום?<select name="arrPlusDays" id="fl_plus"><option value="0" ${+e.arrPlusDays?'':'selected'}>כן</option><option value="1" ${+e.arrPlusDays?'selected':''}>לא, למחרת</option></select></label>
+        <label class="f">להגיע לשדה (שעות לפני)<input type="number" step="0.5" min="0" max="6" name="bufferH" id="fl_buf" value="${(+e.airportBuffer||180)/60}"></label></div>
+      <div class="pair"><label class="f">קוד הזמנה<input name="booking" id="fl_booking" value="${esc(e.booking)}" dir="ltr"></label>
+        <label class="f">מושב<input name="seat" id="fl_seat" value="${esc(e.seat)}" dir="ltr"></label></div>
+      <label class="f">מזוודות<input name="baggage" id="fl_bag" value="${esc(e.baggage)}"></label>
+      <div class="pair"><label class="f">הגעה לשדה<select name="travelMode" id="fl_mode">${mo('car')}${mo('transit')}${mo('walk')}</select></label>
+        <label class="f">זמן נסיעה לשדה (דקות)<input type="number" min="0" max="600" name="travelMin" id="fl_tmin" value="${esc(e.travelMin)}"></label></div>
+      <div class="btns" style="margin-top:1rem"><button class="b p" type="submit">שמירה</button>
+      ${id?`<button class="b r" type="button" data-act="del" data-id="${id}">מחיקה</button>`:''}</div>
+    </form>`);
+  document.getElementById('flForm').onsubmit=x=>{
+    x.preventDefault();
+    const f=Object.fromEntries(new FormData(x.target).entries());
+    f.airportBuffer=String(Math.round((parseFloat(f.bufferH)||3)*60)); delete f.bufferH;
+    f.title=(f.fromCode||'')+' ← '+(f.toCode||''); f.local=f.fromName||f.fromCode; f.address=f.fromName||f.fromCode;
+    if(id){const oldDate=e.date;const tc=f.travelMin!==String(e.travelMin||'')||f.travelMode!==e.travelMode;
+      Object.assign(e,f,{updated:stamp()});if(tc){e.travelEst=false;const p=prevPoint(e);e.travelFrom=p?p.id:null;}touchDay(oldDate);}
+    else{data.events.push(Object.assign({id:uid(),kind:'flight',details:'',bgShort:'',bgMore:'',sources:'',status:'planned',note:'',travelEst:false,photos:[],updated:stamp()},f));
+      if(!dayOf(f.date))data.days.push({date:f.date,title:'יום חדש',sub:'',type:'city',summary:'',updated:stamp(),exported:''});}
+    save();closeSheet();render(true);
+  };
+}
+
+/* Stays */
+function openStay(sid){
+  const st=stayById(sid); if(!st)return;
+  const tot=dayDiff(st.checkinDate,st.checkoutDate);
+  openSheet(`<h3><span class="ico" style="display:inline-flex;width:1.4rem;margin-inline-end:.3rem">${BED}</span>${esc(st.name)}</h3>
+    <div class="m">${tot} ${tot===1?'לילה':'לילות'}</div>
+    <dl class="finfo">
+      ${st.local?`<dt>שם מקומי</dt><dd dir="ltr" style="text-align:right">${esc(st.local)}</dd>`:''}
+      ${st.address?`<dt>כתובת</dt><dd dir="ltr" style="text-align:right">${esc(st.address)}</dd>`:''}
+      ${st.phone?`<dt>טלפון</dt><dd dir="ltr" style="text-align:right;user-select:all">${esc(st.phone)}</dd>`:''}
+      <dt>צ׳ק-אין</dt><dd>${esc(dayLabel(st.checkinDate))} · <span dir="ltr">${esc(st.checkinTime||'')}</span></dd>
+      <dt>צ׳ק-אאוט</dt><dd>${esc(dayLabel(st.checkoutDate))} · עד <span dir="ltr">${esc(st.checkoutTime||'')}</span></dd>
+      ${st.booking?`<dt>קוד הזמנה</dt><dd dir="ltr" style="text-align:right">${esc(st.booking)}</dd>`:''}
+      ${st.cancelPolicy?`<dt>מדיניות ביטול</dt><dd>${esc(st.cancelPolicy)}</dd>`:''}
+      ${st.notes?`<dt>הערות</dt><dd>${esc(st.notes)}</dd>`:''}
+    </dl>
+    <div class="locline" style="margin-top:.6rem">${hasLoc(st)?'נשמר מיקום ✓':'עוד לא נשמר מיקום למלון.'}</div>
+    <div class="btns">
+      <button class="b" data-act="stayDriver" data-sid="${st.id}" type="button">הצגה לנהג</button>
+      <a class="b" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(pt(stayPoint(st)))}" target="_blank" rel="noopener">ניווט למלון</a>
+    </div>
+    <div class="btns"><button class="b" data-act="stayLoc" data-sid="${st.id}" type="button">המיקום שלי עכשיו</button>
+      <button class="b" data-act="stayEdit" data-sid="${st.id}" type="button">עריכה</button></div>
+    <div class="saved" id="locMsg"></div>`);
+}
+function openStayEdit(sid,date){
+  const st=sid?stayById(sid):{name:'',local:'',address:'',phone:'',checkinDate:date,checkinTime:'15:00',checkoutDate:shiftDate(date,1),checkoutTime:'11:00',booking:'',cancelPolicy:'',notes:''};
+  openSheet(`<h3>${sid?'עריכת לינה':'לינה חדשה'}</h3>
+    <form id="stForm">
+      <label class="f">שם המלון<input name="name" id="st_name" value="${esc(st.name)}" required></label>
+      <label class="f">השם המקומי<input name="local" id="st_local" value="${esc(st.local)}" dir="ltr"></label>
+      <label class="f">כתובת (מוצגת לנהג)<input name="address" id="st_address" value="${esc(st.address)}" dir="ltr"></label>
+      <label class="f">טלפון<input name="phone" id="st_phone" value="${esc(st.phone)}" dir="ltr" inputmode="tel"></label>
+      <div class="pair"><label class="f">צ׳ק-אין<input type="date" name="checkinDate" id="st_inD" value="${esc(st.checkinDate)}" required></label>
+        <label class="f">שעה<input type="time" name="checkinTime" id="st_inT" value="${esc(st.checkinTime)}"></label></div>
+      <div class="pair"><label class="f">צ׳ק-אאוט<input type="date" name="checkoutDate" id="st_outD" value="${esc(st.checkoutDate)}" required></label>
+        <label class="f">עד שעה<input type="time" name="checkoutTime" id="st_outT" value="${esc(st.checkoutTime)}"></label></div>
+      <label class="f">קוד הזמנה<input name="booking" id="st_booking" value="${esc(st.booking)}" dir="ltr"></label>
+      <label class="f">מדיניות ביטול<input name="cancelPolicy" id="st_cancel" value="${esc(st.cancelPolicy)}"></label>
+      <label class="f">הערות (ארוחת בוקר, חניה וכדומה)<textarea name="notes" id="st_notes">${esc(st.notes)}</textarea></label>
+      <div class="saved" id="stMsg"></div>
+      <div class="btns" style="margin-top:1rem"><button class="b p" type="submit">שמירה</button>
+      ${sid?`<button class="b r" type="button" data-act="stayDel" data-sid="${sid}">מחיקה</button>`:''}</div>
+    </form>`);
+  document.getElementById('stForm').onsubmit=x=>{
+    x.preventDefault();
+    const f=Object.fromEntries(new FormData(x.target).entries());
+    if(f.checkoutDate<=f.checkinDate){document.getElementById('stMsg').textContent='⚠ תאריך הצ׳ק-אאוט צריך להיות אחרי תאריך הצ׳ק-אין.';return;}
+    if(sid)Object.assign(st,f,{updated:stamp()});
+    else data.stays.push(Object.assign({id:'s'+uid(),updated:stamp()},f));
+    touchDay(f.checkinDate);save();closeSheet();render(true);
+  };
+}
+function stayLocation(sid){
+  const st=stayById(sid), msg=document.getElementById('locMsg'); if(!st)return;
+  if(!navigator.geolocation){if(msg)msg.textContent='⚠ הדפדפן הזה לא תומך באיתור מיקום.';return;}
+  if(msg)msg.textContent='מאתרת מיקום…';
+  navigator.geolocation.getCurrentPosition(p=>{st.lat=+p.coords.latitude.toFixed(6);st.lng=+p.coords.longitude.toFixed(6);st.updated=stamp();save();render(true);openStay(sid);
+    const m=document.getElementById('locMsg');if(m)m.textContent='המיקום נשמר ✓';},
+    err=>{const m=document.getElementById('locMsg');if(m)m.textContent=err.code===1?'⚠ אין הרשאה למיקום.':'⚠ לא הצלחתי לקבל מיקום.';},
+    {enableHighAccuracy:true,timeout:15000,maximumAge:60000});
+}
+
 function openDriver(id){
   const e=ev(id); if(!e)return;
+  if(isFlight(e)){showDriver(e.fromName||e.fromCode,e.terminal?'Terminal '+e.terminal:'',stopTitle(e));return;}
   driver.innerHTML=`<div class="big">${esc(e.local||e.title)}</div>${e.address?`<div class="addr">${esc(e.address)}</div>`:''}
     <div class="he">${esc(e.title)}</div><button class="b p" data-act="closeDriver" type="button" style="flex:none;min-width:10rem">סגירה</button>`;
   driver.hidden=false;
@@ -669,7 +878,6 @@ function openDriver(id){
 
 /* Alternatives: browse per city, swap into a stop's time slot, undo */
 function altById(aid){return data.alternatives.find(a=>a.id===aid);}
-function hasLoc(x){return x&&x.lat!==undefined&&x.lat!==null&&x.lat!=='';}
 /* Straight-line distance in km (haversine) */
 function kmBetween(a,b){
   const R=6371,r=Math.PI/180,dLat=(b.lat-a.lat)*r,dLng=(b.lng-a.lng)*r;
@@ -775,14 +983,15 @@ async function exportDay(ds){
   saveTyping();
   const days=sortedDays(),i=days.findIndex(d=>d.date===ds),day=days[i];
   const name='trip-day'+(i+1)+'-'+day.date+'-'+device()+'.json';
-  const payload={app:'trip-app',version:3,kind:'day',exported:stamp(),device:deviceHe(),dayNumber:i+1,day:await dayPayload(day)};
+  const payload={app:'trip-app',version:4,kind:'day',exported:stamp(),device:deviceHe(),dayNumber:i+1,day:await dayPayload(day),
+    stays:data.stays.filter(st=>st.checkinDate<=day.date&&day.date<=st.checkoutDate)};
   shareFile(JSON.stringify(payload,null,2),name,()=>{dayOf(ds).exported=stamp();save();render(true);});
 }
 async function exportAll(){
   saveTyping();
   const name='trip-all-days-'+fileStamp()+'-'+device()+'.json';
   const all=[];for(const d of sortedDays())all.push(await dayPayload(d));
-  const payload={app:'trip-app',version:3,kind:'trip',exported:stamp(),device:deviceHe(),days:all,alternatives:data.alternatives};
+  const payload={app:'trip-app',version:3,kind:'trip',exported:stamp(),device:deviceHe(),days:all,alternatives:data.alternatives,stays:data.stays};
   shareFile(JSON.stringify(payload,null,2),name,()=>{const t=stamp();data.days.forEach(d=>d.exported=t);save();render(true);});
 }
 function shareFile(text,name,onDone){
@@ -832,7 +1041,19 @@ document.addEventListener('click',x=>{
   else if(a==='closeDriver')driver.hidden=true;
   else if(a==='close')closeSheet();
   else if(a==='edit')openEdit(id);
-  else if(a==='add')openEdit(null,ds);
+  else if(a==='add')openAddChooser(ds);
+  else if(a==='addStop')openEdit(null,ds);
+  else if(a==='addFlight')openFlightEdit(null,ds);
+  else if(a==='addStay')openStayEdit(null,ds);
+  else if(a==='editFlight')openFlightEdit(id);
+  else if(a==='stay')openStay(t.dataset.sid);
+  else if(a==='stayEdit')openStayEdit(t.dataset.sid);
+  else if(a==='stayLoc')stayLocation(t.dataset.sid);
+  else if(a==='stayDriver'){const st=stayById(t.dataset.sid);if(st)showDriver(st.local||st.name,st.address,st.name);}
+  else if(a==='stayDel'){
+    if(t.dataset.sure){data.stays=data.stays.filter(v=>v.id!==t.dataset.sid);save();closeSheet();render(true);}
+    else{t.dataset.sure='1';t.textContent='בטוחה? למחוק את הלינה';}
+  }
   else if(a==='summary')openSummary(ds);
   else if(a==='exportDay')exportDay(ds);
   else if(a==='exportAll')exportAll();
