@@ -143,6 +143,10 @@ a.b{display:flex;align-items:center;justify-content:center;text-decoration:none;
 .pop img{width:100%;max-width:12rem;border-radius:.4rem;display:block;margin-top:.3rem}
 .photoview img{max-width:100%;max-height:70vh;border-radius:.6rem}
 .reset{background:none;border:0;color:var(--ink-soft);text-decoration:underline;font:inherit;font-size:.7rem;cursor:pointer}
+.hedit{flex:none;background:rgba(255,255,255,.16);border:1.5px solid var(--lilac-light);color:var(--white);border-radius:1rem;padding:.25rem .6rem;font:inherit;font-size:.8rem;cursor:pointer;display:flex;align-items:center;gap:.3rem}
+.hedit svg{width:.95rem;height:.95rem}
+.headside{display:flex;flex-direction:column;align-items:center;gap:.35rem;flex:none}
+.addday{display:block;width:calc(100% - 32px);margin:.8rem auto;min-height:2.6rem;border:2px dashed var(--purple);border-radius:1.3rem;background:var(--white);color:var(--purple);font:inherit;font-weight:700;font-size:.9rem;cursor:pointer}
 .stayrow{margin-top:.7rem;background:var(--white);border:2px solid var(--lilac);border-radius:1rem;padding:.6rem .7rem;display:flex;flex-direction:column;gap:.35rem}
 .stayrow .top{display:flex;align-items:center;gap:.5rem;background:none;border:0;padding:0;text-align:right;color:var(--ink);font:inherit;cursor:pointer}
 .stayrow .top svg{width:1.6rem;height:1.6rem;flex:none}
@@ -454,7 +458,7 @@ function render(keepScroll){
   const days=sortedDays(); if(!days.length)return;
   const today=iso(new Date()), hm=nowHM();
   const inTrip=days.some(d=>d.date===today), beforeTrip=today<days[0].date;
-  let html='';
+  let html='<button class="addday" data-act="newDay" data-pos="start" type="button">+ הוספת יום לפני תחילת הטיול</button>';
   days.forEach((day,i)=>{
     const evs=eventsOf(day.date), active=evs.filter(e=>e.status!=='cancelled');
     const doneN=active.filter(e=>e.status==='done').length;
@@ -470,7 +474,7 @@ function render(keepScroll){
         <div class="eyebrow">יום ${i+1} · ${esc(dayLabel(day.date))}${isToday?'<span class="todaybadge">היום</span>':''}</div>
         <h2>${esc(day.title)}</h2>
         <div class="sub">${active.length} תחנות${doneN?' · '+doneN+' מאחורייך':''}${day.sub?' · '+esc(day.sub):''}</div>
-      </div>${SUN}</header><div class="daybody"><div class="trail">`;
+      </div><div class="headside">${SUN}<button class="hedit" data-act="editDay" data-date="${day.date}" type="button" aria-label="עריכת היום"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"/></svg>עריכה</button></div></header><div class="daybody"><div class="trail">`;
     let n=0,prev=morningStay(day.date)?stayPoint(morningStay(day.date)):null;
     const items=evs.map(e=>({t:e.time,e}));
     data.stays.forEach(st=>{
@@ -535,6 +539,7 @@ function render(keepScroll){
       html+=`<section class="alltrip"><h3 style="margin:0;font-size:1rem;color:var(--purple-dark)">סוף הטיול</h3>
         <p class="m" style="margin:.2rem 0;color:var(--ink-soft);font-size:.85rem">קובץ אחד עם כל הימים, בשביל ספר הזיכרונות.</p>
         <div class="btns"><button class="b g" data-act="exportAll" type="button">ייצוא כל הטיול</button></div></section>`;
+      html+=`<button class="addday" style="width:100%" data-act="newDay" data-pos="end" type="button">+ הוספת יום בסוף הטיול</button>`;
     }
     html+='</div></section>';
   });
@@ -753,6 +758,48 @@ function showDriver(big,addr,he){
   driver.innerHTML=`<div class="big">${esc(big)}</div>${addr?`<div class="addr">${esc(addr)}</div>`:''}<div class="he">${esc(he)}</div>
     <button class="b p" data-act="closeDriver" type="button" style="flex:none;min-width:10rem">סגירה</button>`;
   driver.hidden=false;
+}
+
+/* Days: add before or after the trip, edit name, city and type, delete an empty day */
+function dayFormFields(d){
+  const ty=v=>`<option value="${v}" ${(d.type||'city')===v?'selected':''}>${v==='city'?'יום בעיר (רקע מפה)':'יום בטבע (רקע נוף)'}</option>`;
+  return `<label class="f">שם היום<input name="title" id="d_title" value="${esc(d.title||'')}" required></label>
+    <label class="f">עיר או אזור (קובע אילו חלופות יוצגו)<input name="city" id="d_city" value="${esc(d.city||'')}"></label>
+    <label class="f">סוג היום<select name="type" id="d_type">${ty('city')}${ty('nature')}</select></label>
+    <label class="f">שורה קצרה מתחת לשם (לא חובה)<input name="sub" id="d_sub" value="${esc(d.sub||'')}" placeholder="למשל: יום ברכב"></label>`;
+}
+function openDayEdit(ds){
+  const d=dayOf(ds); if(!d)return;
+  const hasStops=eventsOf(ds).length>0;
+  openSheet(`<h3>עריכת היום</h3><div class="m">${esc(dayLabel(ds))}</div>
+    <form id="dayForm">${dayFormFields(Object.assign({},d,{city:dayCity(d)}))}
+      <div class="btns" style="margin-top:1rem"><button class="b p" type="submit">שמירה</button>
+      ${hasStops?'':`<button class="b r" type="button" data-act="delDay" data-date="${ds}">מחיקת היום</button>`}</div>
+      ${hasStops?'<p class="locline">אפשר למחוק יום רק כשאין בו תחנות.</p>':''}
+    </form>`);
+  document.getElementById('dayForm').onsubmit=x=>{
+    x.preventDefault();const f=Object.fromEntries(new FormData(x.target).entries());
+    Object.assign(d,f,{updated:stamp()});save();closeSheet();render(true);
+  };
+}
+function openDayNew(pos){
+  const days=sortedDays(), ref=pos==='start'?days[0]:days[days.length-1];
+  const date=pos==='start'?shiftDate(ref.date,-1):shiftDate(ref.date,1);
+  /* A stay that ends on the new day (or starts on the old first day) can be stretched by one night */
+  const st=pos==='end'?data.stays.find(v=>v.checkoutDate===date):data.stays.find(v=>v.checkinDate===ref.date);
+  openSheet(`<h3>יום חדש ${pos==='start'?'לפני תחילת הטיול':'בסוף הטיול'}</h3><div class="m">${esc(dayLabel(date))}</div>
+    <form id="dayForm">${dayFormFields({title:ref.title,city:dayCity(ref),type:ref.type,sub:''})}
+      ${st?`<label class="f" style="display:flex;gap:.5rem;align-items:flex-start;color:var(--ink)"><input type="checkbox" name="extend" id="d_extend" style="width:auto;margin-top:.3rem">
+        <span>להאריך את <b>${esc(st.name)}</b> בלילה נוסף (${pos==='end'?'צ׳ק-אאוט יעבור ל'+esc(dayLabel(shiftDate(date,1))):'צ׳ק-אין יוקדם ל'+esc(dayLabel(date))})</span></label>`:''}
+      <div class="btns" style="margin-top:1rem"><button class="b p" type="submit">הוספת היום</button></div>
+    </form>`);
+  document.getElementById('dayForm').onsubmit=x=>{
+    x.preventDefault();const f=Object.fromEntries(new FormData(x.target).entries());
+    data.days.push({date,title:f.title,city:f.city,type:f.type,sub:f.sub,summary:'',updated:stamp(),exported:''});
+    if(st&&f.extend){if(pos==='end')st.checkoutDate=shiftDate(date,1);else st.checkinDate=date;st.updated=stamp();}
+    save();closeSheet();render();
+    const sec=document.getElementById('day-'+date); if(sec)sec.scrollIntoView({block:'start'});
+  };
 }
 
 /* Add: choose what kind of item */
@@ -1042,6 +1089,12 @@ document.addEventListener('click',x=>{
   else if(a==='close')closeSheet();
   else if(a==='edit')openEdit(id);
   else if(a==='add')openAddChooser(ds);
+  else if(a==='editDay')openDayEdit(ds);
+  else if(a==='newDay')openDayNew(t.dataset.pos);
+  else if(a==='delDay'){
+    if(t.dataset.sure){data.days=data.days.filter(d=>d.date!==ds);save();closeSheet();render(true);}
+    else{t.dataset.sure='1';t.textContent='בטוחה? למחוק את היום';}
+  }
   else if(a==='addStop')openEdit(null,ds);
   else if(a==='addFlight')openFlightEdit(null,ds);
   else if(a==='addStay')openStayEdit(null,ds);
@@ -1097,8 +1150,8 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
     const offer=w=>{
       if(document.getElementById('updBar'))return;
       const b=document.createElement('div');b.id='updBar';
-      b.style.cssText='position:fixed;left:16px;right:16px;bottom:calc(4.5rem + env(safe-area-inset-bottom,0px));z-index:40;background:#4A2063;color:#fff;border-radius:1rem;padding:.6rem .8rem;display:flex;gap:.6rem;align-items:center;justify-content:space-between;font-size:.9rem';
-      b.innerHTML='<span>יש גרסה חדשה של האפליקציה</span><button class="b g" type="button" style="flex:none">עדכון עכשיו</button>';
+      b.style.cssText='position:fixed;left:12px;right:12px;top:calc(.6rem + env(safe-area-inset-top,0px));z-index:45;background:#EFC12E;color:#241A2B;border:3px solid #4A2063;border-radius:1rem;padding:.8rem 1rem;display:flex;gap:.7rem;align-items:center;justify-content:space-between;font-size:1.05rem;font-weight:700;box-shadow:0 6px 18px rgba(36,26,43,.35)';
+      b.innerHTML='<span>יש גרסה חדשה של האפליקציה</span><button class="b p" type="button" style="flex:none;min-height:2.8rem">עדכון עכשיו</button>';
       b.querySelector('button').onclick=()=>{saveTyping();w.postMessage('skipWaiting');};
       document.body.appendChild(b);
     };
