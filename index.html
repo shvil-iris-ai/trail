@@ -599,7 +599,7 @@ function render(keepScroll){
     html+='</div></section>';
   });
   html+=`<div class="testline">${storageOK?'שמירה במכשיר פעילה ✓'+(lastSaved?' · נשמר '+lastSaved:''):'⚠ השמירה במכשיר לא זמינה בדפדפן הזה'} · ${esc(browserName())} · ${deviceHe()}
-    <br>נבנתה על ידי איריס, בעזרת Claude · גרסה 7<br><button class="reset" data-act="reset" type="button">איפוס לנתוני הדוגמה (לבדיקה בלבד)</button></div>`;
+    <br>נבנתה על ידי איריס, בעזרת Claude · גרסה 8<br><button class="reset" data-act="reset" type="button">איפוס לנתוני הדוגמה (לבדיקה בלבד)</button></div>`;
   document.getElementById('main').innerHTML=html;
   hydratePhotos(document.getElementById('main'));
   if(keepScroll)window.scrollTo(0,y);
@@ -962,7 +962,7 @@ async function pickContact(t){
   const say=x=>{const m=document.getElementById('contactMsg');if(m)m.textContent=x;};
   say('פותחת את אנשי הקשר…');
   let res;
-  try{res=await navigator.contacts.select(contactProps,{multiple:false});}
+  try{res=await navigator.contacts.select(contactProps,{multiple:true});}
   catch(err){say('⚠ לא הצלחתי לפתוח את אנשי הקשר ('+(err&&err.name||'שגיאה')+').');return;}
   if(!res||!res.length){say('לא נבחר איש קשר. אחרי שבוחרים שם ברשימה, צריך ללחוץ על הכפתור בתחתית הרשימה.');return;}
   const c=res[0], name=(c.name||[])[0]||'', tel=(c.tel||[])[0]||'', ad=addrText((c.address||[])[0]);
