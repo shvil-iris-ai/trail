@@ -652,6 +652,7 @@ function openDetails(id){
   openSheet(`<h3>${isFlight(e)?'<span class="ico" style="display:inline-flex;width:1.3rem;margin-inline-end:.3rem">'+PLANE+'</span>':''}${esc(stopTitle(e))}</h3>
     <div class="m">${isFlight(e)?'':esc(e.local)+' · '}<span dir="ltr">${esc(e.time)}</span> · ${esc(dayLabel(e.date))}</div>${fl}
     ${e.address?`<p class="m">מיקום: <span dir="ltr">${esc(e.address)}</span></p>`:''}
+    ${e.phone?`<p class="m">טלפון: <span dir="ltr" style="user-select:all">${esc(e.phone)}</span></p>`:''}
     ${e.details?`<p>${esc(e.details)}</p>`:''}
     <div class="btns">${st('done')}${st('changed')}${st('cancelled')}</div>
     ${e.cancelPolicy?`<p class="more" style="margin-top:.6rem"><b>מדיניות ביטול:</b> ${esc(e.cancelPolicy)}</p>`:''}
@@ -774,7 +775,9 @@ function openEdit(id,date){
         <label class="f">תאריך<input type="date" name="date" id="f_date" value="${esc(e.date)}" required></label>
         <label class="f">שעה<input type="time" name="time" id="f_time" value="${esc(e.time)}" required></label>
       </div>
+      ${contactBtn('f_title','f_address','f_phone')}
       <label class="f">כתובת (מוצגת לנהג ומשמשת לחישוב המסלול)<input name="address" id="f_address" value="${esc(e.address)}" dir="ltr"></label>
+      <label class="f">טלפון<input name="phone" id="f_phone" value="${esc(e.phone||'')}" dir="ltr" inputmode="tel"></label>
       <div class="pair">
         <label class="f">הגעה מהתחנה הקודמת<select name="travelMode" id="f_travelMode">${opt('walk')}${opt('transit')}${opt('car')}</select></label>
         <label class="f">זמן נסיעה (דקות)<input type="number" min="0" max="600" name="travelMin" id="f_travelMin" value="${esc(e.travelMin)}" inputmode="numeric"></label>
@@ -941,6 +944,31 @@ function openDayNew(pos){
   };
 }
 
+/* Contacts: copy name, address and phone from the phone's contact list (Chrome on Android only) */
+function contactsSupported(){return 'contacts' in navigator && 'ContactsManager' in window;}
+function contactBtn(nameId,addrId,phoneId){
+  if(!contactsSupported())return '<p class="locline" style="margin-top:.6rem">בחירה מאנשי הקשר זמינה רק בטלפון.</p>';
+  return `<div class="btns"><button class="b" type="button" data-act="pickContact" data-n="${nameId}" data-a="${addrId}" data-p="${phoneId}">בחירה מאנשי הקשר</button></div><div class="saved" id="contactMsg"></div>`;
+}
+function addrText(a){
+  if(!a)return '';
+  return [(a.addressLine||[]).join(' '),a.city,a.region,a.postalCode,a.country].filter(Boolean).join(', ');
+}
+async function pickContact(t){
+  const msg=document.getElementById('contactMsg');
+  try{
+    const avail=await navigator.contacts.getProperties();
+    const props=['name','tel','address'].filter(p=>avail.includes(p));
+    const res=await navigator.contacts.select(props,{multiple:false});
+    if(!res||!res.length)return;
+    const c=res[0], set=(id,v,onlyEmpty)=>{const el=document.getElementById(id);if(el&&v&&(!onlyEmpty||!el.value))el.value=v;};
+    set(t.dataset.n,(c.name||[])[0],true);
+    set(t.dataset.p,(c.tel||[])[0]);
+    const ad=addrText((c.address||[])[0]); set(t.dataset.a,ad);
+    if(msg)msg.textContent='הועתק מאנשי הקשר ✓'+(ad?'':' (לאיש הקשר הזה לא שמורה כתובת)')+((c.tel||[]).length?'':' (אין טלפון שמור)');
+  }catch(err){if(msg)msg.textContent='⚠ לא הצלחתי לפתוח את אנשי הקשר.';}
+}
+
 /* Add: choose what kind of item */
 function openAddChooser(ds){
   openSheet(`<h3>מה להוסיף?</h3><div class="m">${esc(dayLabel(ds))}</div>
@@ -1022,6 +1050,7 @@ function openStayEdit(sid,date){
     <form id="stForm">
       <label class="f">שם המלון<input name="name" id="st_name" value="${esc(st.name)}" required></label>
       <label class="f">השם המקומי<input name="local" id="st_local" value="${esc(st.local)}" dir="ltr"></label>
+      ${contactBtn('st_name','st_address','st_phone')}
       <label class="f">כתובת (מוצגת לנהג)<input name="address" id="st_address" value="${esc(st.address)}" dir="ltr"></label>
       <label class="f">טלפון<input name="phone" id="st_phone" value="${esc(st.phone)}" dir="ltr" inputmode="tel"></label>
       <div class="pair"><label class="f">צ׳ק-אין<input type="date" name="checkinDate" id="st_inD" value="${esc(st.checkinDate)}" required></label>
@@ -1228,6 +1257,7 @@ document.addEventListener('click',x=>{
   else if(a==='close')closeSheet();
   else if(a==='edit')openEdit(id);
   else if(a==='add')openAddChooser(ds);
+  else if(a==='pickContact')pickContact(t);
   else if(a==='trips')openTrips();
   else if(a==='openTrip'){if(t.dataset.tid===activeId)closeSheet();else switchTrip(t.dataset.tid);}
   else if(a==='newTrip')openNewTrip();
