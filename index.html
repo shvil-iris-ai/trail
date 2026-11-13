@@ -638,7 +638,7 @@ function render(keepScroll){
     html+='</div></section>';
   });
   html+=`<div class="testline">${storageOK?'שמירה במכשיר פעילה ✓'+(lastSaved?' · נשמר '+lastSaved:''):'⚠ השמירה במכשיר לא זמינה בדפדפן הזה'} · ${esc(browserName())} · ${deviceHe()}
-    <br>נבנתה על ידי איריס, בעזרת Claude · גרסה 17</div>`;
+    <br>נבנתה על ידי איריס, בעזרת Claude · גרסה 18</div>`;
   document.getElementById('main').innerHTML=html;
   hydratePhotos(document.getElementById('main'));
   if(keepScroll)window.scrollTo(0,y);
@@ -1920,7 +1920,8 @@ function fillContact(t){
    Adds what is new and fills empty details. The background texts are replaced. Your own notes, marks, photos and travel times stay as they are. */
 const MINE=new Set(['id','status','note','photos','travelMode','travelMin','travelEst','travelFrom','travelStale','travelNote','replaces','replacedBy','updated','date']);
 const MY_TEXT=new Set(['bgShort','bgMore','sources']);
-function mergeInto(target,src,rep){
+let fileDiffs=[];
+function mergeInto(target,src,rep,where){
   let ch=0;
   for(const k of Object.keys(src)){
     if(MINE.has(k)||k==='events')continue;
@@ -1928,7 +1929,7 @@ function mergeInto(target,src,rep){
     const cur=target[k];
     if(cur===undefined||cur===null||cur===''){target[k]=v;ch++;}
     else if(MY_TEXT.has(k)&&JSON.stringify(cur)!==JSON.stringify(v)){target[k]=v;ch++;}
-    else if(JSON.stringify(cur)!==JSON.stringify(v))rep.kept++;
+    else if(JSON.stringify(cur)!==JSON.stringify(v)){rep.kept++;rep.diffs.push({t:target,k,v,where});}
   }
   return ch;
 }
@@ -1940,31 +1941,40 @@ async function updateFromFile(file){
     const evs=[];p.days.forEach(d=>(d.events||[]).forEach(e=>evs.push(e)));
     const known=evs.filter(e=>ev(e.id)).length+(p.stays||[]).filter(s=>stayById(s.id)).length;
     if(!known){msg('⚠ אף תחנה בקובץ לא נמצאה בטיול הפתוח. ייתכן שהקובץ שייך לטיול אחר – אפשר לטעון אותו כטיול חדש.');return;}
-    const rep={added:0,updated:0,kept:0,days:0};
+    const rep={added:0,updated:0,kept:0,days:0,diffs:[]};
     for(const d of p.days){
       const cur=dayOf(d.date);
       if(!cur){const c=Object.assign({},d);delete c.events;c.updated=stamp();c.exported='';c.summary=c.summary||'';data.days.push(c);rep.days++;}
-      else if(mergeInto(cur,Object.assign({},d,{summary:undefined}),rep)){cur.updated=stamp();}
+      else if(mergeInto(cur,Object.assign({},d,{summary:undefined}),rep,dayLabel(cur.date))){cur.updated=stamp();}
     }
     for(const e of evs){
       const cur=ev(e.id);
       if(!cur){const photos=[];for(const ph of (e.photos||[])){if(ph.data){try{await photoPut(ph.id,ph.data);}catch(x){}}const c=Object.assign({},ph);delete c.data;photos.push(c);}
         data.events.push(Object.assign({},e,{photos,updated:stamp()}));rep.added++;}
-      else if(mergeInto(cur,e,rep)){cur.updated=stamp();rep.updated++;}
+      else if(mergeInto(cur,e,rep,stopTitle(cur)+' · '+dayLabel(cur.date))){cur.updated=stamp();rep.updated++;}
     }
-    for(const s of (p.stays||[])){const cur=stayById(s.id);if(!cur){data.stays.push(Object.assign({},s,{updated:stamp()}));rep.added++;}else if(mergeInto(cur,s,rep)){cur.updated=stamp();rep.updated++;}}
+    for(const s of (p.stays||[])){const cur=stayById(s.id);if(!cur){data.stays.push(Object.assign({},s,{updated:stamp()}));rep.added++;}else if(mergeInto(cur,s,rep,'לינה: '+cur.name)){cur.updated=stamp();rep.updated++;}}
     for(const a of (p.alternatives||[])){if(!data.alternatives.some(x=>x.id===a.id)){data.alternatives.push(a);rep.added++;}}
     if(p.trip&&p.trip.notes&&!data.meta.notes)data.meta.notes=p.trip.notes;
-    normalize();save();render(true);
+    normalize();save();render(true);fileDiffs=rep.diffs;
     openSheet(`<h3>הטיול עודכן ✓</h3>
       <p>${rep.updated} פריטים קיבלו פרטים או רקע חדשים.${rep.added?' נוספו '+rep.added+' פריטים חדשים.':''}${rep.days?' נוספו '+rep.days+' ימים.':''}</p>
-      ${rep.kept?`<p class="locline">${rep.kept} פרטים שונים בקובץ ממה שיש אצלך, ונשארו כמו אצלך (למשל שעה או שם שתיקנת).</p>`:''}
+      ${rep.kept?`<h4>${rep.kept===1?'פרט אחד שונה':rep.kept+' פרטים שונים'} בקובץ ממה שיש אצלך</h4><p class="locline">כרגע נשאר מה שאצלך. אפשר לבחור לקחת מהקובץ.</p>
+        ${rep.diffs.map((x,i)=>`<div class="cmp"><div class="k">${esc(x.where)} · ${esc(FIELD_HE[x.k]||x.k)}</div>
+          <div class="v"><b>אצלך:</b> ${showVal(x.k,x.t[x.k])}</div><div class="v"><b>בקובץ:</b> ${showVal(x.k,x.v)}</div>
+          <div class="btns"><button class="b" data-act="takeDiff" data-i="${i}" type="button">לקחת מהקובץ</button></div></div>`).join('')}
+        ${rep.diffs.length>1?'<div class="btns"><button class="b g" data-act="takeAllDiffs" type="button">לקחת את כולם מהקובץ</button></div>':''}`:''}
       <p class="locline">ההערות, הסימונים, התמונות וזמני הנסיעה שלך לא השתנו. כדי שהעדכון יגיע גם למכשיר השני – לסנכרן.</p>`);
   }catch(e){msg('⚠ לא הצלחתי לקרוא את הקובץ.');}
 }
 const updateInput=document.createElement('input');updateInput.type='file';updateInput.accept='.json,application/json';updateInput.hidden=true;document.body.appendChild(updateInput);
 updateInput.addEventListener('change',()=>{const f=updateInput.files[0];updateInput.value='';if(f)updateFromFile(f);});
 
+function takeDiff(i,btn){
+  const x=fileDiffs[i];if(!x||x.done)return;x.t[x.k]=x.v;x.t.updated=stamp();x.done=true;
+  if(x.t.date&&x.t.time!==undefined)touchDay(x.t.date);
+  save();render(true);if(btn){btn.textContent='עודכן מהקובץ ✓';btn.disabled=true;}
+}
 /* ===== Deleting a trip that is shared: stop the sharing first ===== */
 async function stopShareCore(sh){
   try{await gd('files/'+sh.fileId,{method:'DELETE'});}catch(e){if(!(e.kind==='http'&&e.status===404))throw e;}
@@ -2032,6 +2042,8 @@ document.addEventListener('click',x=>{
   else if(a==='pasteContact')pasteContact();
   else if(a==='fillContact')fillContact(t);
   else if(a==='updateTrip')updateInput.click();
+  else if(a==='takeDiff')takeDiff(+t.dataset.i,t);
+  else if(a==='takeAllDiffs'){fileDiffs.forEach((x,i)=>takeDiff(i,panel.querySelector('[data-act="takeDiff"][data-i="'+i+'"]')));t.textContent='הכול עודכן מהקובץ ✓';t.disabled=true;}
   else if(a==='sharePublish')sharePublish();
   else if(a==='shareStop')shareStop(t);
   else if(a==='shareCopy')shareCopy();

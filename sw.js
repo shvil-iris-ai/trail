@@ -1,7 +1,7 @@
 /* Offline support for the trip app.
    The app's own files are kept on the device, so it opens with no internet.
    Fonts and the map library are kept after their first use. Map tiles and Google Maps always need internet. */
-const VERSION = 'trail-v17';
+const VERSION = 'trail-v18';
 const APP_FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 const RUNTIME = 'trail-runtime-v1';
 const RUNTIME_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com', 'unpkg.com'];
