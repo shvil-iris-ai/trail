@@ -143,6 +143,17 @@ a.b{display:flex;align-items:center;justify-content:center;text-decoration:none;
 .pop img{width:100%;max-width:12rem;border-radius:.4rem;display:block;margin-top:.3rem}
 .photoview img{max-width:100%;max-height:70vh;border-radius:.6rem}
 .reset{background:none;border:0;color:var(--ink-soft);text-decoration:underline;font:inherit;font-size:.7rem;cursor:pointer}
+.tripcard{margin:.8rem 16px 0;background:var(--white);border-radius:1.1rem;padding:.8rem .9rem;border:2px solid var(--lilac-light);display:flex;flex-direction:column;gap:.25rem}
+.tripcard h1{margin:0;font-family:var(--f-display);font-weight:400;font-size:1.6rem;color:var(--purple-dark);line-height:1.15}
+.tripcard .range{font-size:.9rem;color:var(--ink-soft);font-weight:600}
+.tripcard .notes{white-space:pre-wrap;font-size:.95rem}
+.triplist{display:flex;flex-direction:column;gap:.5rem;margin-top:.3rem}
+.tripitem{display:flex;flex-direction:column;align-items:flex-start;gap:.1rem;width:100%;text-align:right;background:var(--paper);border:2px solid var(--lilac-light);border-radius:.9rem;padding:.6rem .8rem;font:inherit;color:var(--ink);cursor:pointer}
+.tripitem.on{border-color:var(--purple);background:var(--white)}
+.tripitem .t{font-weight:700;font-size:1.05rem}
+.tripitem .m{font-size:.8rem;color:var(--ink-soft)}
+.sizes{display:flex;gap:.4rem}
+.sizes .b{min-height:2.8rem}
 .hedit{flex:none;background:rgba(255,255,255,.16);border:1.5px solid var(--lilac-light);color:var(--white);border-radius:1rem;padding:.25rem .6rem;font:inherit;font-size:.8rem;cursor:pointer;display:flex;align-items:center;gap:.3rem}
 .hedit svg{width:.95rem;height:.95rem}
 .headside{display:flex;flex-direction:column;align-items:center;gap:.35rem;flex:none}
@@ -177,12 +188,13 @@ a.b{display:flex;align-items:center;justify-content:center;text-decoration:none;
 <main id="main"></main>
 <nav>
   <button class="b" id="prevDay" type="button">יום קודם</button>
-  <button class="b size" id="sizeBtn" type="button" aria-label="שינוי גודל הטקסט">א+</button>
+  <button class="b" id="menuBtn" type="button" style="flex:none;padding:0 1rem">תפריט</button>
   <button class="b" id="nextDay" type="button">יום הבא</button>
 </nav>
 <div class="sheet" id="sheet" hidden><div class="panel" id="panel" role="dialog" aria-modal="true"></div></div>
 <div class="driver" id="driver" hidden></div>
 <input type="file" id="photoInput" accept="image/*" multiple hidden>
+<input type="file" id="importInput" accept=".json,application/json" hidden>
 
 <script>
 const KEY='trip-app-v1', SIZE_KEY='trip-app-size';
@@ -299,17 +311,55 @@ function normalize(){
   data.events.forEach(e=>{if(e.travelMin&&e.travelFrom===undefined&&e.status!=='cancelled'){const p=prevActive(e);e.travelFrom=(e.travelStale||(p&&p.updated>e.updated))?null:(p?p.id:null);}});
   data.events.forEach(e=>{if(!Array.isArray(e.photos))e.photos=[];if((e.lat===undefined||e.lat===''||e.lat===null)&&COORDS[e.local]){e.lat=COORDS[e.local].lat;e.lng=COORDS[e.local].lng;}if(e.travelMode===undefined)e.travelMode='';if(e.travelMin===undefined)e.travelMin='';if(e.travelEst===undefined)e.travelEst=true;});
 }
+/* Trips: an index of all trips, and one stored record per trip. The open trip is kept in `data`. */
+const IDX_KEY='trip-app-index';
+let idx=null, activeId=null;
+function tripKey(id){return 'trip-app-trip-'+id;}
+function rangeOf(days){const ds=days.map(d=>d.date).sort();return {first:ds[0]||'',last:ds[ds.length-1]||'',count:ds.length};}
+function idxEntry(id){return idx.trips.find(t=>t.id===id);}
+function saveIndex(){try{localStorage.setItem(IDX_KEY,JSON.stringify(idx));}catch(e){storageOK=false;}}
+function loadIndex(){
+  try{idx=JSON.parse(localStorage.getItem(IDX_KEY)||'null');}catch(e){idx=null;}
+  if(idx&&Array.isArray(idx.trips)&&idx.trips.length)return;
+  /* First run of this version: the existing trip becomes the first trip in the list (nothing is deleted) */
+  let old=null;try{old=localStorage.getItem(KEY);}catch(e){}
+  const id='t'+uid(), entry={id,name:'רומא וטוסקנה (דוגמה)',first:'',last:'',count:0};
+  if(old){try{const o=JSON.parse(old);Object.assign(entry,rangeOf(o.days||[]));localStorage.setItem(tripKey(id),old);}catch(e){}}
+  idx={trips:[entry],lastOpened:id};saveIndex();
+}
+function chooseStartTrip(){
+  const t=iso(new Date()), list=idx.trips.filter(x=>x.first);
+  const now=list.find(x=>x.first<=t&&t<=x.last); if(now)return now.id;
+  const next=list.filter(x=>x.first>t).sort((a,b)=>a.first.localeCompare(b.first))[0]; if(next)return next.id;
+  return (idxEntry(idx.lastOpened)?idx.lastOpened:idx.trips[0].id);
+}
 function load(){
-  try{
-    localStorage.setItem(KEY+'-t','1');localStorage.removeItem(KEY+'-t');
-    const s=localStorage.getItem(KEY);
-    if(s){data=JSON.parse(s);normalize();return;}
-  }catch(e){storageOK=false;}
-  data=sample();normalize();
+  try{localStorage.setItem(KEY+'-t','1');localStorage.removeItem(KEY+'-t');}catch(e){storageOK=false;}
+  if(!idx)loadIndex();
+  if(!activeId||!idxEntry(activeId))activeId=chooseStartTrip();
+  let s=null;try{s=localStorage.getItem(tripKey(activeId));}catch(e){storageOK=false;}
+  if(s){try{data=JSON.parse(s);}catch(e){data=null;}}
+  if(!data||!s){data=sample();}
+  if(!data.meta)data.meta={name:idxEntry(activeId).name,notes:''};
+  normalize();
 }
 function save(){
-  try{localStorage.setItem(KEY,JSON.stringify(data));storageOK=true;lastSaved=nowHM();}
-  catch(e){storageOK=false;}
+  try{
+    localStorage.setItem(tripKey(activeId),JSON.stringify(data));storageOK=true;lastSaved=nowHM();
+    const en=idxEntry(activeId); if(en){Object.assign(en,{name:data.meta.name},rangeOf(data.days));}
+    idx.lastOpened=activeId;saveIndex();
+  }catch(e){storageOK=false;}
+}
+function switchTrip(id){
+  saveTyping();save();activeId=id;data=null;load();idx.lastOpened=id;saveIndex();closeSheet();render();scrollToFocus();
+}
+function fmtRange(a,b){
+  if(!a)return 'עוד אין ימים';
+  const [y1,m1,d1]=a.split('-').map(Number),[y2,m2,d2]=b.split('-').map(Number);
+  const mon=(y,m)=>new Date(y,m-1,1).toLocaleDateString('he-IL',{month:'long'});
+  if(y1===y2&&m1===m2)return (d1===d2?d1:d1+'–'+d2)+' ב'+mon(y1,m1)+' '+y1;
+  if(y1===y2)return d1+' ב'+mon(y1,m1)+' – '+d2+' ב'+mon(y2,m2)+' '+y1;
+  return d1+' ב'+mon(y1,m1)+' '+y1+' – '+d2+' ב'+mon(y2,m2)+' '+y2;
 }
 function setSize(sz){document.documentElement.dataset.size=sz;try{localStorage.setItem(SIZE_KEY,sz);}catch(e){}}
 function loadSize(){try{const s=localStorage.getItem(SIZE_KEY);if(s)document.documentElement.dataset.size=s;}catch(e){}}
@@ -458,7 +508,12 @@ function render(keepScroll){
   const days=sortedDays(); if(!days.length)return;
   const today=iso(new Date()), hm=nowHM();
   const inTrip=days.some(d=>d.date===today), beforeTrip=today<days[0].date;
-  let html='<button class="addday" data-act="newDay" data-pos="start" type="button">+ הוספת יום לפני תחילת הטיול</button>';
+  const rg=rangeOf(data.days);
+  let html=`<section class="tripcard"><h1>${esc(data.meta.name)}</h1>
+    <div class="range">${esc(fmtRange(rg.first,rg.last))} · ${rg.count} ${rg.count===1?'יום':'ימים'}</div>
+    ${data.meta.notes?`<div class="notes">${esc(data.meta.notes)}</div>`:''}
+    <div class="btns"><button class="b" data-act="editTrip" type="button">עריכת פרטי הטיול</button><button class="b" data-act="trips" type="button">הטיולים שלי</button></div></section>`;
+  html+='<button class="addday" data-act="newDay" data-pos="start" type="button">+ הוספת יום לפני תחילת הטיול</button>';
   days.forEach((day,i)=>{
     const evs=eventsOf(day.date), active=evs.filter(e=>e.status!=='cancelled');
     const doneN=active.filter(e=>e.status==='done').length;
@@ -760,6 +815,90 @@ function showDriver(big,addr,he){
   driver.hidden=false;
 }
 
+/* Menu */
+function openMenu(){
+  const cur=document.documentElement.dataset.size||'large';
+  const sz=(v,l)=>`<button class="b ${cur===v?'on':''}" data-act="size" data-size="${v}" type="button">${l}</button>`;
+  openSheet(`<h3>תפריט</h3>
+    <div class="chooser"><button class="b p" data-act="trips" type="button">${BED.replace('#6B3FA0','#FFFFFF').replace('#6B3FA0','#FFFFFF')}<span>הטיולים שלי</span></button></div>
+    <h4>גודל הטקסט</h4><div class="sizes">${sz('big','רגיל')}${sz('large','גדול')}${sz('huge','גדול מאוד')}</div>
+    <h4>סנכרון</h4><p class="locline">הסנכרון בין המחשב לטלפון יגיע בעדכון הבא.</p>`);
+}
+function openTrips(){
+  save();
+  const t=iso(new Date());
+  const groups={now:[],soon:[],past:[]};
+  idx.trips.forEach(x=>{if(!x.first||x.first>t)groups.soon.push(x);else if(x.last<t)groups.past.push(x);else groups.now.push(x);});
+  groups.soon.sort((a,b)=>(a.first||'9').localeCompare(b.first||'9'));groups.past.sort((a,b)=>b.last.localeCompare(a.last));
+  const item=x=>`<button class="tripitem ${x.id===activeId?'on':''}" data-act="openTrip" data-tid="${x.id}" type="button">
+    <span class="t">${esc(x.name)}${x.id===activeId?' · פתוח עכשיו':''}</span><span class="m">${esc(fmtRange(x.first,x.last))}${x.count?' · '+x.count+' ימים':''}</span></button>`;
+  const sec=(k,l)=>groups[k].length?`<h4>${l}</h4><div class="triplist">${groups[k].map(item).join('')}</div>`:'';
+  openSheet(`<h3>הטיולים שלי</h3>${sec('now','עכשיו')}${sec('soon','בקרוב')}${sec('past','היו')}
+    <div class="btns" style="margin-top:1rem"><button class="b g" data-act="newTrip" type="button">+ טיול חדש</button>
+    <button class="b" data-act="importTrip" type="button">טעינת טיול מקובץ</button></div>
+    <div class="saved" id="importMsg"></div>`);
+}
+function openNewTrip(){
+  const t=iso(new Date());
+  openSheet(`<h3>טיול חדש</h3>
+    <form id="ntForm">
+      <label class="f">שם הטיול<input name="name" id="nt_name" required></label>
+      <div class="pair"><label class="f">מתאריך<input type="date" name="start" id="nt_start" value="${t}" required></label>
+        <label class="f">עד תאריך<input type="date" name="end" id="nt_end" value="${shiftDate(t,6)}" required></label></div>
+      <label class="f">עיר או אזור עיקרי<input name="city" id="nt_city"></label>
+      <label class="f">סוג רוב הימים<select name="type" id="nt_type"><option value="city">ימי עיר</option><option value="nature">ימי טבע</option></select></label>
+      <label class="f">כמה שורות על הטיול (לא חובה)<textarea name="notes" id="nt_notes" rows="3"></textarea></label>
+      <div class="saved" id="ntMsg"></div>
+      <div class="btns" style="margin-top:1rem"><button class="b p" type="submit">יצירת הטיול</button></div>
+    </form>`);
+  document.getElementById('ntForm').onsubmit=x=>{
+    x.preventDefault();const f=Object.fromEntries(new FormData(x.target).entries());
+    const n=dayDiff(f.start,f.end)+1;
+    if(n<1){document.getElementById('ntMsg').textContent='⚠ תאריך הסיום צריך להיות אחרי תאריך ההתחלה.';return;}
+    if(n>90){document.getElementById('ntMsg').textContent='⚠ אפשר ליצור טיול של עד 90 ימים.';return;}
+    const days=[];for(let i=0;i<n;i++)days.push({date:shiftDate(f.start,i),title:f.city||('יום '+(i+1)),city:f.city,type:f.type,sub:'',summary:'',updated:stamp(),exported:''});
+    createTrip({meta:{name:f.name,notes:f.notes},days,events:[],stays:[],alternatives:[]});
+  };
+}
+function createTrip(d){
+  saveTyping();save();
+  const id='t'+uid();
+  idx.trips.push(Object.assign({id,name:d.meta.name},rangeOf(d.days)));
+  activeId=id;data=d;normalize();save();closeSheet();render();scrollToFocus();
+}
+function openTripEdit(){
+  const many=idx.trips.length>1;
+  openSheet(`<h3>פרטי הטיול</h3>
+    <form id="teForm">
+      <label class="f">שם הטיול<input name="name" id="te_name" value="${esc(data.meta.name)}" required></label>
+      <label class="f">כמה שורות על הטיול<textarea name="notes" id="te_notes" rows="3">${esc(data.meta.notes||'')}</textarea></label>
+      <p class="locline">התאריכים ומספר הימים מחושבים מהימים שבטיול. כדי לשנות אותם, מוסיפים או מוחקים ימים.</p>
+      <div class="btns" style="margin-top:1rem"><button class="b p" type="submit">שמירה</button>
+      ${many?'<button class="b r" type="button" data-act="delTrip">מחיקת הטיול</button>':''}</div>
+    </form>`);
+  document.getElementById('teForm').onsubmit=x=>{
+    x.preventDefault();const f=Object.fromEntries(new FormData(x.target).entries());
+    data.meta.name=f.name;data.meta.notes=f.notes;save();closeSheet();render(true);
+  };
+}
+/* Load a trip from a file made by "export whole trip" (or a trip file prepared for you) */
+const importInput=document.getElementById('importInput');
+importInput.addEventListener('change',async()=>{
+  const file=importInput.files[0];importInput.value='';if(!file)return;
+  const msg=document.getElementById('importMsg');if(msg)msg.textContent='טוענת…';
+  try{
+    const p=JSON.parse(await file.text());
+    if(p.app!=='trip-app')throw new Error('not');
+    if(p.kind!=='trip'){if(msg)msg.textContent='⚠ זה קובץ של יום בודד. לטעינת טיול צריך קובץ של כל הטיול.';return;}
+    const events=[];
+    for(const d of p.days){for(const e of (d.events||[])){
+      const photos=[];for(const ph of (e.photos||[])){const pid=ph.id||('p'+uid());if(ph.data){try{await photoPut(pid,ph.data);}catch(err){}}const c=Object.assign({},ph,{id:pid});delete c.data;photos.push(c);}
+      events.push(Object.assign({},e,{photos}));}}
+    const days=p.days.map(d=>{const c=Object.assign({},d);delete c.events;return c;});
+    createTrip({meta:{name:(p.trip&&p.trip.name)||('טיול מקובץ '+(days[0]?days[0].date:'')),notes:(p.trip&&p.trip.notes)||''},days,events,stays:p.stays||[],alternatives:p.alternatives||[]});
+  }catch(err){const m=document.getElementById('importMsg');if(m)m.textContent='⚠ לא הצלחתי לקרוא את הקובץ. צריך קובץ שנוצר בכפתור "ייצוא כל הטיול".';}
+});
+
 /* Days: add before or after the trip, edit name, city and type, delete an empty day */
 function dayFormFields(d){
   const ty=v=>`<option value="${v}" ${(d.type||'city')===v?'selected':''}>${v==='city'?'יום בעיר (רקע מפה)':'יום בטבע (רקע נוף)'}</option>`;
@@ -1038,7 +1177,7 @@ async function exportAll(){
   saveTyping();
   const name='trip-all-days-'+fileStamp()+'-'+device()+'.json';
   const all=[];for(const d of sortedDays())all.push(await dayPayload(d));
-  const payload={app:'trip-app',version:3,kind:'trip',exported:stamp(),device:deviceHe(),days:all,alternatives:data.alternatives,stays:data.stays};
+  const payload={app:'trip-app',version:4,kind:'trip',exported:stamp(),device:deviceHe(),trip:{name:data.meta.name,notes:data.meta.notes||''},days:all,alternatives:data.alternatives,stays:data.stays};
   shareFile(JSON.stringify(payload,null,2),name,()=>{const t=stamp();data.days.forEach(d=>d.exported=t);save();render(true);});
 }
 function shareFile(text,name,onDone){
@@ -1080,7 +1219,7 @@ document.addEventListener('click',x=>{
   else if(a==='myLoc')myLocation(id);
   else if(a==='dayMap')openDayMap(ds);
   else if(a==='reset'){
-    if(t.dataset.sure){try{localStorage.removeItem(KEY);}catch(e){}photoClearAll();data=sample();save();render();scrollToFocus();}
+    if(t.dataset.sure){const nm=data.meta?data.meta.name:'';data=sample();normalize();data.meta={name:nm||'טיול לדוגמה',notes:''};save();render();scrollToFocus();}
     else{t.dataset.sure='1';t.textContent='בטוחה? כל מה שכתבת יימחק מהמכשיר הזה (לחיצה נוספת לאישור)';}
   }
   else if(a==='travel')openTravel(id);
@@ -1089,6 +1228,17 @@ document.addEventListener('click',x=>{
   else if(a==='close')closeSheet();
   else if(a==='edit')openEdit(id);
   else if(a==='add')openAddChooser(ds);
+  else if(a==='trips')openTrips();
+  else if(a==='openTrip'){if(t.dataset.tid===activeId)closeSheet();else switchTrip(t.dataset.tid);}
+  else if(a==='newTrip')openNewTrip();
+  else if(a==='importTrip')importInput.click();
+  else if(a==='editTrip')openTripEdit();
+  else if(a==='size'){setSize(t.dataset.size);openMenu();}
+  else if(a==='delTrip'){
+    if(t.dataset.sure){const gone=activeId;try{localStorage.removeItem(tripKey(gone));}catch(e){}
+      idx.trips=idx.trips.filter(x=>x.id!==gone);activeId=null;data=null;load();saveIndex();closeSheet();render();scrollToFocus();}
+    else{t.dataset.sure='1';t.textContent='בטוחה? הטיול יימחק מהמכשיר הזה';}
+  }
   else if(a==='editDay')openDayEdit(ds);
   else if(a==='newDay')openDayNew(t.dataset.pos);
   else if(a==='delDay'){
@@ -1120,10 +1270,7 @@ document.addEventListener('click',x=>{
 document.addEventListener('keydown',x=>{if(x.key==='Escape'){saveTyping();if(!driver.hidden)driver.hidden=true;else if(!sheet.hidden)closeSheet();}});
 document.getElementById('prevDay').onclick=()=>jumpDay(-1);
 document.getElementById('nextDay').onclick=()=>jumpDay(1);
-document.getElementById('sizeBtn').onclick=()=>{
-  const order=['big','large','huge'],cur=document.documentElement.dataset.size||'large';
-  setSize(order[(order.indexOf(cur)+1)%order.length]);
-};
+document.getElementById('menuBtn').onclick=()=>{saveTyping();openMenu();};
 
 /* Always show the saved version when the page comes back into view */
 function refresh(){load();render(true);}
