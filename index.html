@@ -180,6 +180,14 @@ a.b{display:flex;align-items:center;justify-content:center;text-decoration:none;
 .cmp .k{font-weight:700;color:var(--purple-dark)}
 .cmp .v{font-size:.95rem;white-space:pre-wrap;overflow-wrap:anywhere}
 label.chk{display:flex;gap:.6rem;align-items:center;color:var(--ink)}
+.viewbar{background:var(--gold);color:var(--ink);border-radius:1rem;padding:.7rem .9rem;margin:.6rem 0;display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;justify-content:space-between}
+.viewbar span{font-size:.85rem}
+.viewbar .btns{margin-top:0;flex:1 1 12rem}
+html[data-ro="1"] [data-act="status"],html[data-ro="1"] [data-act="edit"],html[data-ro="1"] [data-act="editFlight"],html[data-ro="1"] [data-act="done"],
+html[data-ro="1"] [data-act="newDay"],html[data-ro="1"] .hedit,html[data-ro="1"] [data-act="add"],html[data-ro="1"] [data-act="summary"],
+html[data-ro="1"] [data-act="exportDay"],html[data-ro="1"] .alltrip,html[data-ro="1"] .expstate,html[data-ro="1"] [data-act="swap"],html[data-ro="1"] [data-act="undoSwap"],
+html[data-ro="1"] [data-act="pickAlt"],html[data-ro="1"] [data-act="stayEdit"],html[data-ro="1"] [data-act="stayDel"],html[data-ro="1"] [data-act="stayLoc"],
+html[data-ro="1"] [data-act="delPhoto"],html[data-ro="1"] [data-act="reset"],html[data-ro="1"] [data-act="addPhoto"]{display:none!important}
 label.chk input{width:1.4rem;height:1.4rem;flex:none}
 .driver{position:fixed;inset:0;z-index:30;background:var(--white);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:1rem;padding:2rem 1.2rem;text-align:center}
 .driver[hidden]{display:none}
@@ -318,6 +326,7 @@ function normalize(){
 }
 /* Trips: an index of all trips, and one stored record per trip. The open trip is kept in `data`. */
 const IDX_KEY='trip-app-index';
+let RO=false;
 let idx=null, activeId=null;
 function tripKey(id){return 'trip-app-trip-'+id;}
 function rangeOf(days){const ds=days.map(d=>d.date).sort();return {first:ds[0]||'',last:ds[ds.length-1]||'',count:ds.length};}
@@ -347,6 +356,7 @@ function load(){
   if(!data||!s){data=sample();}
   if(!data.meta)data.meta={name:idxEntry(activeId).name,notes:''};
   normalize();
+  RO=!!data.meta.view;document.documentElement.dataset.ro=RO?'1':'';
 }
 function save(){
   try{
@@ -475,13 +485,13 @@ function travelRow(prev,e,past){
   const url=gmUrl(prev,e);
   if(!e.travelMin){
     return `<div class="trow"><div class="mkcol"></div><div class="tr ${past?'past':''}">${md.icon}<span>${prev.isStay?'מהמלון · ':''}זמן הנסיעה לא הוזן${(hasLoc(prev)&&hasLoc(e)&&!isFlight(prev))?' · '+fmtKm(kmBetween(prev,e))+' בקו אווירי':''}</span>
-      <button class="gm" style="background:none;border:0;padding:0;font:inherit" data-act="travel" data-id="${e.id}" type="button">${e.travelNote?'פרטי המסלול והוספת זמן':'הוספת זמן'}</button>
+      ${RO?(e.travelNote?`<button class="gm" style="background:none;border:0;padding:0;font:inherit" data-act="travelView" data-id="${e.id}" type="button">פרטי המסלול</button>`:''):`<button class="gm" style="background:none;border:0;padding:0;font:inherit" data-act="travel" data-id="${e.id}" type="button">${e.travelNote?'פרטי המסלול והוספת זמן':'הוספת זמן'}</button>`}
       <a class="gm" href="${url}" target="_blank" rel="noopener">בדיקה ב-Google Maps</a></div></div>`;
   }
   const target=isFlight(e)?minusMin(e.time,e.airportBuffer||180):e.time;
   const leave=minusMin(target,e.travelMin);
   return `<div class="trow"><div class="mkcol"></div><div class="tr ${past?'past':''}">${md.icon}<span>${prev.isStay?'מהמלון · ':''}${md.name} · ${esc(e.travelMin)} דק׳${e.travelEst?' (משוער)':''}</span>${isFlight(e)?`<b>להגיע לשדה עד <span dir="ltr">${target}</span></b>`:''}<b>לצאת עד <span dir="ltr">${leave}</span></b>${(e.travelStale||(e.travelFrom!==undefined&&e.travelFrom!==prev.id))?'<b style="color:var(--red)">· לבדוק שוב, התחנה הקודמת השתנתה</b>':''}
-    <button class="gm" style="background:none;border:0;padding:0;font:inherit" data-act="travel" data-id="${e.id}" type="button">${e.travelNote?'פרטי המסלול ותיקון':'תיקון'}</button>
+    ${RO?(e.travelNote?`<button class="gm" style="background:none;border:0;padding:0;font:inherit" data-act="travelView" data-id="${e.id}" type="button">פרטי המסלול</button>`:''):`<button class="gm" style="background:none;border:0;padding:0;font:inherit" data-act="travel" data-id="${e.id}" type="button">${e.travelNote?'פרטי המסלול ותיקון':'תיקון'}</button>`}
     <a class="gm" href="${url}" target="_blank" rel="noopener">בדיקה ב-Google Maps</a></div></div>`;
 }
 function openTravel(id){
@@ -521,7 +531,9 @@ function render(keepScroll){
   let html=`<section class="tripcard"><h1>${esc(data.meta.name)}</h1>
     <div class="range">${esc(fmtRange(rg.first,rg.last))} · ${rg.count} ${rg.count===1?'יום':'ימים'}</div>
     ${data.meta.notes?`<div class="notes">${esc(data.meta.notes)}</div>`:''}
-    <div class="btns"><button class="b" data-act="editTrip" type="button">עריכת פרטי הטיול</button><button class="b" data-act="trips" type="button">הטיולים שלי</button></div></section>`;
+    <div class="btns"><button class="b" data-act="editTrip" type="button">${RO?'פרטי הטיול':'עריכת פרטי הטיול'}</button><button class="b" data-act="trips" type="button">הטיולים שלי</button></div></section>`;
+  if(RO)html=`<section class="viewbar"><div><b>צפייה בטיול${data.meta.view.owner?' של '+esc(data.meta.view.owner):''}</b><br><span>עודכן ${esc(fmtWhen(data.meta.view.savedAt))}</span></div>
+    <div class="btns"><button class="b g" data-act="viewRefresh" type="button">רענון</button><button class="b" data-act="installHelp" type="button">התקנה</button></div></section>`+html;
   html+='<button class="addday" data-act="newDay" data-pos="start" type="button">+ הוספת יום לפני תחילת הטיול</button>';
   days.forEach((day,i)=>{
     const evs=eventsOf(day.date), active=evs.filter(e=>e.status!=='cancelled');
@@ -577,7 +589,7 @@ function render(keepScroll){
     if(ended){
       html+=`<div class="row" id="endedRow"><div class="mkcol"><div class="mk done">${CHECK}</div></div>
         <section class="ended"><div class="t">היום הסתיים</div>
-        <div class="m" style="color:var(--ink-soft)">${doneN} תחנות מאחורייך. רוצה לכתוב כמה מילים על היום?</div>
+        <div class="m" style="color:var(--ink-soft)">${RO?doneN+' תחנות היו היום.':doneN+' תחנות מאחורייך. רוצה לכתוב כמה מילים על היום?'}</div>
         <div class="btns"><button class="b p" data-act="summary" data-date="${day.date}" type="button">כתיבת סיכום היום</button></div></section></div>`;
     }
     html+='</div>';
@@ -595,7 +607,7 @@ function render(keepScroll){
     const exp=day.exported&&!un
       ?`<span class="expstate ok">יוצא ✓ ${esc(new Date(day.exported).toLocaleString('he-IL',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}))}</span>`
       :`<span class="expstate no">${day.exported?un+' שינויים שלא גובו':'עוד לא יוצא'}</span>`;
-    html+=`<section class="summary"><h3>סיכום היום</h3>${day.summary?`<div class="txt">${esc(day.summary)}</div>`:'<div class="empty">עוד לא נכתב סיכום ליום הזה.</div>'}
+    if(!RO||day.summary)html+=`<section class="summary"><h3>סיכום היום</h3>${day.summary?`<div class="txt">${esc(day.summary)}</div>`:'<div class="empty">עוד לא נכתב סיכום ליום הזה.</div>'}
       <div class="btns"><button class="b" data-act="summary" data-date="${day.date}" type="button">${day.summary?'עריכת הסיכום':'כתיבת סיכום'}</button>
       <button class="b" data-act="exportDay" data-date="${day.date}" type="button">ייצוא היום הזה</button></div>${exp}</section>`;
     html+=`<button class="b add" data-act="add" data-date="${day.date}" type="button">+ הוספה ליום הזה: תחנה, טיסה או לינה</button>`;
@@ -608,7 +620,7 @@ function render(keepScroll){
     html+='</div></section>';
   });
   html+=`<div class="testline">${storageOK?'שמירה במכשיר פעילה ✓'+(lastSaved?' · נשמר '+lastSaved:''):'⚠ השמירה במכשיר לא זמינה בדפדפן הזה'} · ${esc(browserName())} · ${deviceHe()}
-    <br>נבנתה על ידי איריס, בעזרת Claude · גרסה 10<br><button class="reset" data-act="reset" type="button">איפוס לנתוני הדוגמה (לבדיקה בלבד)</button></div>`;
+    <br>נבנתה על ידי איריס, בעזרת Claude · גרסה 11<br><button class="reset" data-act="reset" type="button">איפוס לנתוני הדוגמה (לבדיקה בלבד)</button></div>`;
   document.getElementById('main').innerHTML=html;
   hydratePhotos(document.getElementById('main'));
   if(keepScroll)window.scrollTo(0,y);
@@ -667,17 +679,17 @@ function openDetails(id){
     ${e.cancelPolicy?`<p class="more" style="margin-top:.6rem"><b>מדיניות ביטול:</b> ${esc(e.cancelPolicy)}</p>`:''}
     ${e.replaces?`<div class="btns"><button class="b r" data-act="undoSwap" data-id="${e.id}" type="button">ביטול ההחלפה, חזרה ל${esc((ev(e.replaces)||{}).title||'תחנה המקורית')}</button></div>`:
       (e.status!=='cancelled'&&e.status!=='done'&&data.alternatives.some(a=>a.city===dayCity(dayOf(e.date)||{})&&!a.used))?`<div class="btns"><button class="b g" data-act="swap" data-id="${e.id}" type="button">החלפה בחלופה</button></div>`:''}
-    <h4>מה באמת עשיתי</h4>
+    ${RO?(e.note?`<h4>מה באמת עשיתי</h4><p style="white-space:pre-wrap">${esc(e.note)}</p>`:''):`<h4>מה באמת עשיתי</h4>
     <textarea id="noteBox" data-id="${e.id}" placeholder="רשמים, מחשבות, מה היה שונה מהתוכנית">${esc(e.note)}</textarea>
-    <div class="saved" id="noteSaved">הרשמים נשמרים אוטומטית תוך כדי כתיבה</div>
-    <h4>תמונות</h4>
+    <div class="saved" id="noteSaved">הרשמים נשמרים אוטומטית תוך כדי כתיבה</div>`}
+    ${(!RO||e.photos.length)?`<h4>תמונות</h4>
     ${e.photos.length?`<div class="thumbs">${e.photos.map(p=>`<button data-act="photo" data-id="${e.id}" data-pid="${p.id}" type="button" aria-label="הצגת התמונה">${photoImg(p)}</button>`).join('')}</div>`:'<div class="locline">עוד אין תמונות בתחנה הזו.</div>'}
     <div class="btns"><button class="b" data-act="addPhoto" data-id="${e.id}" type="button">+ צירוף תמונה</button></div>
-    <div class="saved" id="photoMsg"></div>
-    <h4>מיקום על המפה</h4>
+    <div class="saved" id="photoMsg"></div>`:''}
+    ${RO?'':`<h4>מיקום על המפה</h4>
     <div class="locline">${e.lat!==undefined&&e.lat!==''&&e.lat!==null?'נשמר מיקום ✓':'עוד לא נשמר מיקום. בלי מיקום, התחנה לא תופיע במפת היום.'}</div>
     <div class="btns"><button class="b" data-act="myLoc" data-id="${e.id}" type="button">המיקום שלי עכשיו</button></div>
-    <div class="saved" id="locMsg"></div>
+    <div class="saved" id="locMsg"></div>`}
     ${e.bgShort?`<h4>רקע</h4><p>${esc(e.bgShort)}</p>`:''}
     ${e.bgMore?`<details class="more"><summary><b>פרטים מעניינים</b></summary><p>${esc(e.bgMore)}</p></details>`:''}
     ${e.sources?`<div class="src">${esc(e.sources)}</div>`:''}
@@ -834,6 +846,7 @@ function openMenu(){
   const ss=syncState();
   openSheet(`<h3>תפריט</h3>
     <div class="chooser"><button class="b p" data-act="trips" type="button">${BED.replace('#6B3FA0','#FFFFFF').replace('#6B3FA0','#FFFFFF')}<span>הטיולים שלי</span></button></div>
+    ${RO?'':'<div class="chooser" style="margin-top:.5rem"><button class="b" data-act="share" type="button"><span>שיתוף הטיול הזה לצפייה'+(data.meta.share&&data.meta.share.fileId?' · משותף ✓':'')+'</span></button></div>'}
     <h4>גודל הטקסט</h4><div class="sizes">${sz('big','רגיל')}${sz('large','גדול')}${sz('huge','גדול מאוד')}</div>
     <h4>סנכרון בין המכשירים</h4>
     <p class="locline">${ss.lastSync?'סנכרון אחרון במכשיר הזה: '+esc(fmtWhen(ss.lastSync)):'עוד לא היה סנכרון במכשיר הזה.'} הטיולים נשמרים בתיקייה "שביל – הטיולים שלי" בדרייב שלך.</p>
@@ -849,7 +862,7 @@ function openTrips(){
   idx.trips.forEach(x=>{if(!x.first||x.first>t)groups.soon.push(x);else if(x.last<t)groups.past.push(x);else groups.now.push(x);});
   groups.soon.sort((a,b)=>(a.first||'9').localeCompare(b.first||'9'));groups.past.sort((a,b)=>b.last.localeCompare(a.last));
   const item=x=>`<button class="tripitem ${x.id===activeId?'on':''}" data-act="openTrip" data-tid="${x.id}" type="button">
-    <span class="t">${esc(x.name)}${x.id===activeId?' · פתוח עכשיו':''}</span><span class="m">${esc(fmtRange(x.first,x.last))}${x.count?' · '+x.count+' ימים':''}</span></button>`;
+    <span class="t">${esc(x.name)}${x.viewOf?' · לצפייה':''}${x.id===activeId?' · פתוח עכשיו':''}</span><span class="m">${esc(fmtRange(x.first,x.last))}${x.count?' · '+x.count+' ימים':''}</span></button>`;
   const sec=(k,l)=>groups[k].length?`<h4>${l}</h4><div class="triplist">${groups[k].map(item).join('')}</div>`:'';
   openSheet(`<h3>הטיולים שלי</h3>${sec('now','עכשיו')}${sec('soon','בקרוב')}${sec('past','היו')}
     <div class="btns" style="margin-top:1rem"><button class="b g" data-act="newTrip" type="button">+ טיול חדש</button>
@@ -886,6 +899,9 @@ function createTrip(d){
 }
 function openTripEdit(){
   const many=idx.trips.length>1;
+  if(RO){openSheet(`<h3>${esc(data.meta.name)}</h3><p>טיול לצפייה${data.meta.view.owner?' ששיתפה '+esc(data.meta.view.owner):''}. אפשר לצפות בו בלבד.</p>
+    ${data.meta.notes?`<p>${esc(data.meta.notes)}</p>`:''}
+    <div class="btns" style="margin-top:1rem"><button class="b r" type="button" data-act="delTrip">הסרת הטיול מהמכשיר הזה</button></div>`);return;}
   openSheet(`<h3>פרטי הטיול</h3>
     <form id="teForm">
       <label class="f">שם הטיול<input name="name" id="te_name" value="${esc(data.meta.name)}" required></label>
@@ -1224,20 +1240,22 @@ function loadGis(){
 function syncMsg(t){const m=document.getElementById('syncMsg');if(m)m.textContent=t;}
 function fmtWhen(s){if(!s)return '';const d=new Date(s);return d.toLocaleDateString('he-IL',{day:'numeric',month:'numeric'})+' בשעה '+d.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});}
 /* Must run directly inside the click, so the Google sign-in window is not blocked */
-function startSync(){
-  if(syncing)return;
-  if(!navigator.onLine){syncMsg('⚠ אין חיבור לאינטרנט. הסנכרון צריך אינטרנט, כל השאר עובד גם בלעדיו.');return;}
-  if(gTok&&Date.now()<gExp-60000){runSync();return;}
+function startSync(){if(syncing)return;authThen(runSync);}
+let authNext=null;
+function authThen(fn){
+  if(!navigator.onLine){syncMsg('⚠ אין חיבור לאינטרנט. החיבור לדרייב צריך אינטרנט, כל השאר עובד גם בלעדיו.');return;}
+  if(gTok&&Date.now()<gExp-60000){fn();return;}
+  authNext=fn;
   if(!(window.google&&google.accounts&&google.accounts.oauth2)){
     syncMsg('מתחברת לגוגל…');
-    loadGis().then(()=>syncMsg('מוכן. לחצי שוב על "סנכרון עכשיו".')).catch(()=>syncMsg('⚠ לא הצלחתי להגיע לגוגל. בדקי את החיבור לאינטרנט ונסי שוב.'));
+    loadGis().then(()=>syncMsg('מוכן. לחצי שוב על אותו כפתור.')).catch(()=>syncMsg('⚠ לא הצלחתי להגיע לגוגל. בדקי את החיבור לאינטרנט ונסי שוב.'));
     return;
   }
   if(!tokClient)tokClient=google.accounts.oauth2.initTokenClient({client_id:G_CLIENT,scope:G_SCOPE,
     callback:r=>{
       if(r.error){syncMsg(r.error==='access_denied'?'⚠ לא ניתן אישור גישה. אפשר לנסות שוב.':'⚠ ההתחברות לגוגל לא הצליחה ('+r.error+').');return;}
-      if(!google.accounts.oauth2.hasGrantedAllScopes(r,G_SCOPE)){syncMsg('⚠ בחלון של גוגל צריך לסמן את התיבה של הגישה לדרייב. לחצי שוב על "סנכרון עכשיו" וסמני אותה.');return;}
-      gTok=r.access_token;gExp=Date.now()+(+r.expires_in||3600)*1000;setSyncState({consented:true});runSync();
+      if(!google.accounts.oauth2.hasGrantedAllScopes(r,G_SCOPE)){syncMsg('⚠ בחלון של גוגל צריך לסמן את התיבה של הגישה לדרייב. לחצי שוב על הכפתור וסמני אותה.');return;}
+      gTok=r.access_token;gExp=Date.now()+(+r.expires_in||3600)*1000;setSyncState({consented:true});const f=authNext;authNext=null;if(f)f();
     },
     error_callback:e=>{const t=e&&e.type;
       syncMsg(t==='popup_closed'?'החלון של גוגל נסגר לפני האישור. אפשר ללחוץ שוב.':t==='popup_failed_to_open'?'⚠ הדפדפן חסם את החלון של גוגל. צריך לאפשר חלונות קופצים לאתר הזה.':'⚠ ההתחברות לגוגל לא הצליחה.');}
@@ -1393,7 +1411,7 @@ async function askConflict(c,i,n,otherDev){
 }
 function errText(e){
   if(e&&e.kind==='net')return '⚠ החיבור לאינטרנט נפל באמצע. כלום לא אבד. אפשר ללחוץ שוב.';
-  if(e&&e.kind==='auth')return '⚠ פג תוקף ההתחברות לגוגל. לחצי שוב על "סנכרון עכשיו".';
+  if(e&&e.kind==='auth')return '⚠ פג תוקף ההתחברות לגוגל. לחצי שוב על הכפתור.';
   if(e&&e.kind==='http'&&e.status===403)return '⚠ גוגל סירבה לגישה (403). אם הגדרות הפרויקט נעשו ממש עכשיו, נסי שוב בעוד כמה דקות.';
   if(e&&e.kind==='http')return '⚠ שגיאה מהדרייב ('+e.status+'). כלום לא אבד. אפשר לנסות שוב.';
   return '⚠ משהו השתבש בסנכרון. כלום לא אבד. אפשר לנסות שוב.';
@@ -1504,7 +1522,7 @@ async function runSync(){
           step('מעלה תמונה '+k+' מתוך '+list.length);
           const blob=await (await fetch(url)).blob();
           const mp=multipart({name:'תמונה '+pid+'.jpg',parents:[folder],appProperties:{shvil:'photo',pid}},blob);
-          await gd('files?uploadType=multipart&fields=id',{upload:true,method:'POST',headers:mp.headers,body:mp.body});report.photosUp++;
+          const up=await gd('files?uploadType=multipart&fields=id',{upload:true,method:'POST',headers:mp.headers,body:mp.body});onDrive.set(pid,up.id);report.photosUp++;
         }else if(!url&&onDrive.has(pid)){
           step('מורידה תמונה '+k+' מתוך '+list.length);
           const blob=await gd('files/'+onDrive.get(pid)+'?alt=media',{blob:true});
@@ -1512,6 +1530,17 @@ async function runSync(){
           await photoPut(pid,du);report.photosDown++;
         }
       }catch(e){if(e&&e.kind&&e.kind!=='http')throw e;report.photoFail++;}
+    }
+    /* Shared trips: refresh their view copies */
+    for(const en of idx.trips){
+      if(en.noSync)continue;const t=readTrip(en.id);if(!t||!t.meta||!t.meta.share||!t.meta.share.fileId)continue;
+      step('מעדכנת את עותק הצפייה: '+en.name);
+      const before=JSON.stringify(t.meta.share);
+      const sh=await publishView(t,folder,onDrive);
+      if(sh)t.meta.share=sh;else delete t.meta.share;
+      en.viewPublished=stamp();saveIndex();
+      if(JSON.stringify(t.meta.share)!==before){const L2=syncable(t);if(en.driveId)await gdPutTrip(en.driveId,folder,en.id,L2);writeTripLocal(en.id,L2,t);saveIndex();}
+      report.views=(report.views||0)+1;
     }
     setSyncState({lastSync:stamp()});
     if(!idxEntry(activeId)){activeId=null;}
@@ -1525,6 +1554,7 @@ async function runSync(){
     if(report.newThere)lines.push('טיולים שהועלו לדרייב בפעם הראשונה: '+report.newThere+'.');
     if(report.photosUp||report.photosDown)lines.push('תמונות: '+report.photosUp+' הועלו, '+report.photosDown+' הורדו.');
     if(report.photoFail)lines.push('⚠ '+report.photoFail+' תמונות לא עברו. הן יעברו בסנכרון הבא.');
+    if(report.views)lines.push(report.views===1?'עותק הצפייה של הטיול המשותף עודכן.':'עודכנו '+report.views+' עותקי צפייה.');
     if(report.removed)lines.push('טיולים שנמחקו מכאן: '+report.removed+'.');
     openSheet(`<h3>הסנכרון הסתיים ✓</h3>${lines.map(l=>`<p>${esc(l)}</p>`).join('')}<div class="btns" style="margin-top:1rem"><button class="b p" data-act="close" type="button">סגירה</button></div>`);
   }catch(e){
@@ -1534,6 +1564,211 @@ async function runSync(){
     try{data=null;load();render(true);}catch(x){}
   }finally{syncing=false;pendingAsk=null;}
 }
+
+/* ===== Sharing a trip for viewing =====
+   The owner publishes a separate "view copy" of one trip, holding only what she chose to show,
+   and opens it for "anyone with the link" on Drive. Viewers open the link with no sign-in;
+   the app reads the copy with a key that works only from this site and only for Drive. */
+const G_VIEW_KEY='AIzaSyClEP36c2wGvYyDitPAxPVjWsPKLogLGvg';
+const VIEW_ID=(()=>{try{return new URLSearchParams(location.search).get('view');}catch(e){return null;}})();
+const SHARE_OPTS=[['details','פרטים (הטקסט החופשי בכל תחנה, הערות על הלינה והטיול)',true],['booking','מספרי הזמנה',false],['seat','מושב וכבודה בטיסות',false],
+  ['cancel','מדיניות ביטול',false],['phone','טלפונים',false],['note','"מה באמת עשיתי"',false],['summary','סיכומי הימים',false],['photos','תמונות',false]];
+function defaultShareOpts(){const o={};SHARE_OPTS.forEach(([k,,v])=>o[k]=v);return o;}
+function viewLink(fid){return location.origin+location.pathname+'?view='+encodeURIComponent(fid);}
+function shareText(name,fid){return 'שיתפתי איתך לצפייה את הטיול "'+name+'". הקישור נפתח בטלפון או במחשב, בלי הרשמה ובלי התקנה:\n'+viewLink(fid);}
+function filterView(trip,o,photoMap){
+  const t=JSON.parse(JSON.stringify(syncable(trip)));
+  delete t.meta.share;delete t.meta.view;
+  if(!o.details)t.meta.notes='';
+  t.events.forEach(e=>{
+    if(!o.details)e.details='';
+    if(!o.booking)delete e.booking;
+    if(!o.seat){delete e.seat;delete e.baggage;}
+    if(!o.cancel)delete e.cancelPolicy;
+    if(!o.phone)delete e.phone;
+    if(!o.note)e.note='';
+    e.photos=o.photos?(e.photos||[]).filter(p=>photoMap&&photoMap.has(p.id)).map(p=>Object.assign({},p,{driveId:photoMap.get(p.id)})):[];
+  });
+  t.stays.forEach(s=>{if(!o.booking)delete s.booking;if(!o.phone)delete s.phone;if(!o.cancel)delete s.cancelPolicy;if(!o.details)s.notes='';});
+  t.days.forEach(d=>{if(!o.summary)d.summary='';});
+  t.alternatives.forEach(a=>{if(!o.cancel)delete a.cancelPolicy;if(!o.details)a.details='';});
+  return t;
+}
+/* Publishes (or refreshes) the view copy of one trip. Returns the updated share settings, or null if the copy was removed elsewhere. */
+async function publishView(trip,folder,photoMap){
+  const sh=Object.assign({pubPhotos:[]},trip.meta.share);const o=Object.assign(defaultShareOpts(),sh.opts||{});
+  if(o.photos){
+    for(const e of trip.events)for(const p of (e.photos||[])){
+      if(!photoMap.has(p.id)){const url=await photoGet(p.id);if(url){
+        const blob=await (await fetch(url)).blob();
+        const mp=multipart({name:'תמונה '+p.id+'.jpg',parents:[folder],appProperties:{shvil:'photo',pid:p.id}},blob);
+        const r=await gd('files?uploadType=multipart&fields=id',{upload:true,method:'POST',headers:mp.headers,body:mp.body});photoMap.set(p.id,r.id);}}
+      if(photoMap.has(p.id)&&!sh.pubPhotos.includes(p.id)){
+        await gd('files/'+photoMap.get(p.id)+'/permissions?fields=id',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role:'reader',type:'anyone'})});
+        sh.pubPhotos.push(p.id);
+      }
+    }
+  }else if(sh.pubPhotos.length){
+    for(const pid of sh.pubPhotos){if(photoMap.has(pid)){try{await gd('files/'+photoMap.get(pid)+'/permissions/anyoneWithLink',{method:'DELETE'});}catch(e){if(!(e.kind==='http'&&e.status===404))throw e;}}}
+    sh.pubPhotos=[];
+  }
+  const body={app:'trip-app',kind:'view',version:1,owner:sh.owner||'',savedAt:stamp(),trip:filterView(trip,o,photoMap)};
+  const blob=new Blob([JSON.stringify(body)],{type:'application/json'});
+  if(sh.fileId){
+    const mp=multipart({name:'צפייה – '+tripFileName(trip.meta.name)},blob);
+    try{await gd('files/'+sh.fileId+'?uploadType=multipart&fields=id',{upload:true,method:'PATCH',headers:mp.headers,body:mp.body});}
+    catch(e){if(e.kind==='http'&&e.status===404)return null;throw e;}
+  }else{
+    const mp=multipart({name:'צפייה – '+tripFileName(trip.meta.name),mimeType:'application/json',parents:[folder],appProperties:{shvil:'view'}},blob);
+    const r=await gd('files?uploadType=multipart&fields=id',{upload:true,method:'POST',headers:mp.headers,body:mp.body});
+    await gd('files/'+r.id+'/permissions?fields=id',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role:'reader',type:'anyone'})});
+    sh.fileId=r.id;
+  }
+  return sh;
+}
+async function photoMapNow(){const m=new Map();(await gdList('photo')).forEach(f=>m.set((f.appProperties||{}).pid,f.id));return m;}
+
+/* The share sheet */
+let shareBusy=false;
+function shareForm(o){return SHARE_OPTS.map(([k,l])=>`<label class="f chk"><input type="checkbox" name="${k}" ${o[k]?'checked':''}> ${esc(l)}</label>`).join('');}
+function readShareForm(){const o={};SHARE_OPTS.forEach(([k])=>{const i=panel.querySelector('input[name="'+k+'"]');o[k]=!!(i&&i.checked);});return o;}
+function openShare(){
+  const sh=data.meta.share, o=Object.assign(defaultShareOpts(),(sh&&sh.opts)||{});
+  let owner='איריס';try{owner=localStorage.getItem('trip-app-owner')||owner;}catch(e){}
+  if(sh&&sh.fileId){
+    const txt=shareText(data.meta.name,sh.fileId);
+    openSheet(`<h3>שיתוף לצפייה</h3><div class="m">${esc(data.meta.name)} · משותף לצפייה ✓</div>
+      <p class="locline">עותק הצפייה מתעדכן בכל סנכרון${(idxEntry(activeId)||{}).viewPublished?'. עודכן לאחרונה במכשיר הזה: '+esc(fmtWhen(idxEntry(activeId).viewPublished)):''}.</p>
+      <h4>ההודעה לשליחה</h4><textarea id="shareTxt" readonly style="min-height:6rem">${esc(txt)}</textarea>
+      <div class="btns"><button class="b g" data-act="shareSend" type="button">שליחה…</button><button class="b" data-act="shareCopy" type="button">העתקת ההודעה</button></div>
+      <h4>מה השותפים רואים</h4><p class="locline">ימים, תחנות, שעות, כתובות, מפה, זמני נסיעה, טיסות ולינות מוצגים תמיד. אפשר להוסיף:</p>
+      ${shareForm(o)}
+      <label class="f">השם שלך, כפי שיופיע לשותפים<input id="shareOwner" value="${esc(sh.owner||owner)}"></label>
+      <div class="btns" style="margin-top:.8rem"><button class="b p" data-act="sharePublish" type="button">שמירה ועדכון עותק הצפייה</button></div>
+      <div class="saved" id="syncMsg"></div>
+      <div class="btns" style="margin-top:1rem"><button class="b r" data-act="shareStop" type="button">הפסקת השיתוף</button></div>`);
+  }else{
+    openSheet(`<h3>שיתוף לצפייה</h3><div class="m">${esc(data.meta.name)}</div>
+      <p>השותפים יקבלו קישור שנפתח בטלפון או במחשב, בלי הרשמה. הם יוכלו רק לצפות, ויראו את השינויים שלך אחרי כל סנכרון.</p>
+      <p class="locline">⚠ כל מי שהקישור מגיע אליו יוכל לצפות. אפשר להפסיק את השיתוף בכל רגע, ואז הקישור מפסיק לעבוד.</p>
+      <h4>מה השותפים רואים</h4><p class="locline">ימים, תחנות, שעות, כתובות, מפה, זמני נסיעה, טיסות ולינות מוצגים תמיד. אפשר להוסיף:</p>
+      ${shareForm(o)}
+      <label class="f">השם שלך, כפי שיופיע לשותפים<input id="shareOwner" value="${esc(owner)}"></label>
+      <div class="btns" style="margin-top:.8rem"><button class="b g" data-act="sharePublish" type="button">יצירת קישור לצפייה</button></div>
+      <div class="saved" id="syncMsg"></div>`);
+  }
+}
+function sharePublish(){
+  if(shareBusy)return;
+  const o=readShareForm(),ow=document.getElementById('shareOwner'),owner=ow?ow.value.trim():'';
+  try{localStorage.setItem('trip-app-owner',owner);}catch(e){}
+  const tid=activeId;
+  authThen(async()=>{
+    shareBusy=true;syncMsg('מכינה את עותק הצפייה…');
+    try{
+      const folder=await gdFolder(),pm=await photoMapNow();
+      data.meta.share=Object.assign({},data.meta.share||{},{opts:o,owner});
+      const sh=await publishView(data,folder,pm);
+      if(tid!==activeId)return;
+      data.meta.share=sh;const en=idxEntry(activeId);if(en)en.viewPublished=stamp();save();openShare();
+    }catch(e){syncMsg(errText(e));}
+    finally{shareBusy=false;}
+  });
+}
+function shareStop(t){
+  if(!t.dataset.sure){t.dataset.sure='1';t.textContent='בטוחה? הקישור יפסיק לעבוד אצל כל מי שקיבל אותו';return;}
+  const sh=data.meta.share;if(!sh)return;
+  authThen(async()=>{
+    syncMsg('מפסיקה את השיתוף…');
+    try{
+      try{await gd('files/'+sh.fileId,{method:'DELETE'});}catch(e){if(!(e.kind==='http'&&e.status===404))throw e;}
+      if((sh.pubPhotos||[]).length){const pm=await photoMapNow();for(const pid of sh.pubPhotos){if(pm.has(pid)){try{await gd('files/'+pm.get(pid)+'/permissions/anyoneWithLink',{method:'DELETE'});}catch(e){}}}}
+      delete data.meta.share;save();
+      openSheet(`<h3>השיתוף הופסק</h3><p>הקישור כבר לא עובד. מי שהתקין את האפליקציה ישמור את הגרסה האחרונה שראה, בלי עדכונים.</p><p class="locline">כדי שגם המכשיר השני יידע שהשיתוף הופסק, כדאי לסנכרן.</p>`);
+    }catch(e){syncMsg(errText(e));}
+  });
+}
+function shareCopy(){
+  const ta=document.getElementById('shareTxt');if(!ta)return;
+  const done=()=>syncMsg('ההודעה הועתקה ✓ אפשר להדביק בוואטסאפ');
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(ta.value).then(done).catch(()=>{ta.select();try{document.execCommand('copy');done();}catch(e){}});}
+  else{ta.select();try{document.execCommand('copy');done();}catch(e){}}
+}
+function shareSend(){
+  const ta=document.getElementById('shareTxt');if(!ta)return;
+  if(navigator.share){navigator.share({text:ta.value}).catch(()=>{});}else shareCopy();
+}
+
+/* The viewer side */
+async function fetchView(fid){
+  let r;
+  try{r=await fetch('https://www.googleapis.com/drive/v3/files/'+encodeURIComponent(fid)+'?alt=media&key='+G_VIEW_KEY);}catch(e){throw new SyncErr('net');}
+  if(r.status===404||r.status===403)throw new SyncErr('gone',r.status);
+  if(!r.ok)throw new SyncErr('http',r.status);
+  const b=await r.json();if(!b||b.kind!=='view')throw new SyncErr('gone');
+  return b;
+}
+function storeView(fid,body){
+  if(!idx)idx={trips:[],lastOpened:null};
+  const trip=syncable(body.trip||{});trip.meta.view={owner:body.owner||'',savedAt:body.savedAt||'',fileId:fid,fetched:stamp()};
+  let en=idx.trips.find(t=>t.viewOf===fid);
+  if(!en){en={id:'v'+uid(),viewOf:fid,noSync:true,name:trip.meta.name};idx.trips.push(en);}
+  const keep=data;data=trip;normalize();const fixed=data;data=keep;
+  try{localStorage.setItem(tripKey(en.id),JSON.stringify(fixed));}catch(e){}
+  Object.assign(en,{name:fixed.meta.name},rangeOf(fixed.days));saveIndex();
+  return en.id;
+}
+async function viewPhotos(trip){
+  let n=0;
+  for(const e of trip.events||[])for(const p of (e.photos||[])){
+    if(!p.driveId||await photoGet(p.id))continue;
+    try{const r=await fetch('https://www.googleapis.com/drive/v3/files/'+encodeURIComponent(p.driveId)+'?alt=media&key='+G_VIEW_KEY);if(!r.ok)continue;
+      const blob=await r.blob();const du=await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.onerror=rej;fr.readAsDataURL(blob);});
+      await photoPut(p.id,du);n++;}catch(e){}
+  }
+  return n;
+}
+async function openView(fid,mode){
+  const body=await fetchView(fid);
+  const id=storeView(fid,body);
+  const wasActive=id===activeId;
+  activeId=id;data=null;load();idx.lastOpened=id;saveIndex();
+  if(mode==='silent'&&wasActive)render(true);else{closeSheet();render();scrollToFocus();}
+  try{history.replaceState(null,'',location.pathname);}catch(e){}
+  viewPhotos(data).then(n=>{if(n&&activeId===id)render(true);});
+}
+function viewErr(e){
+  const local=VIEW_ID&&idx&&idx.trips.find(t=>t.viewOf===VIEW_ID);
+  if(local&&activeId!==local.id){activeId=local.id;data=null;load();render();scrollToFocus();}
+  const t=e&&e.kind==='gone'?'הקישור לא פעיל. ייתכן שהשיתוף הופסק, או שהקישור הועתק לא בשלמותו.'
+    :e&&e.kind==='net'?(local?'אין חיבור לאינטרנט. מוצגת הגרסה האחרונה שנשמרה במכשיר.':'אין חיבור לאינטרנט. צריך אינטרנט כדי לפתוח את הטיול בפעם הראשונה.')
+    :'לא הצלחתי לטעון את הטיול. אפשר לנסות שוב מאוחר יותר.';
+  openSheet(`<h3>צפייה בטיול</h3><p>${esc(t)}</p>`);
+}
+function viewRefresh(){
+  const v=data.meta.view;if(!v)return;
+  if(!navigator.onLine){openSheet('<h3>רענון</h3><p>אין חיבור לאינטרנט. מוצגת הגרסה האחרונה שנשמרה במכשיר.</p>');return;}
+  openSheet('<h3>רענון</h3><p id="syncStep">בודקת אם יש עדכונים…</p>');
+  openView(v.fileId).then(()=>openSheet(`<h3>רענון</h3><p>הטיול מעודכן ✓</p><p class="locline">עודכן לאחרונה על ידי ${esc(data.meta.view.owner||'הבעלים')}: ${esc(fmtWhen(data.meta.view.savedAt))}</p>`)).catch(viewErr);
+}
+let installEvt=null;
+window.addEventListener('beforeinstallprompt',x=>{x.preventDefault();installEvt=x;});
+function installHelp(){
+  if(installEvt){installEvt.prompt();installEvt.userChoice.finally(()=>{installEvt=null;});return;}
+  openSheet(`<h3>התקנת האפליקציה</h3>
+    <p>אחרי ההתקנה הטיול נפתח בלחיצה מהמסך הראשי, וגם בלי אינטרנט.</p>
+    <h4>אנדרואיד (כרום)</h4><p>התפריט ⋮ למעלה ← "התקנת אפליקציה" או "הוספה למסך הבית".</p>
+    <h4>אייפון (ספארי)</h4><p>כפתור השיתוף (ריבוע עם חץ) ← "הוספה למסך הבית".</p>
+    <h4>מחשב (כרום או Edge)</h4><p>האייקון של מסך עם חץ בקצה שורת הכתובת ← "התקנה".</p>
+    <p class="locline">אחרי ההתקנה, לחיצה על "רענון" מביאה את העדכונים האחרונים.</p>`);
+}
+function travelViewSheet(id){
+  const e=ev(id);if(!e)return;const md=MODE[e.travelMode]||MODE.walk;
+  openSheet(`<h3>נסיעה</h3><div class="m">אל ${esc(stopTitle(e))}</div>
+    <p>${esc(md.name)}${e.travelMin?' · '+esc(e.travelMin)+' דק׳':''}</p>${e.travelNote?`<p style="white-space:pre-wrap">${esc(e.travelNote)}</p>`:''}`);
+}
+const RO_BLOCK=new Set(['newDay','editDay','done','summary','exportDay','exportAll','add','status','swap','undoSwap','pickAlt','doSwap','addPhoto','delPhoto',
+  'myLoc','edit','editFlight','stayEdit','stayDel','stayLoc','travel','reset','addStop','addFlight','addStay','del','delDay','share','sharePublish','shareStop']);
 
 /* Export */
 function fileStamp(){const n=new Date(),z=v=>String(v).padStart(2,'0');return iso(n)+'-'+z(n.getHours())+z(n.getMinutes());}
@@ -1582,7 +1817,16 @@ document.addEventListener('click',x=>{
   if(!t){if(x.target===sheet){saveTyping();closeSheet();}return;}
   const a=t.dataset.act,id=t.dataset.id,ds=t.dataset.date;
   saveTyping();
+  if(RO&&RO_BLOCK.has(a))return;
   if(a==='details')openDetails(id);
+  else if(a==='share')openShare();
+  else if(a==='sharePublish')sharePublish();
+  else if(a==='shareStop')shareStop(t);
+  else if(a==='shareCopy')shareCopy();
+  else if(a==='shareSend')shareSend();
+  else if(a==='viewRefresh')viewRefresh();
+  else if(a==='installHelp')installHelp();
+  else if(a==='travelView')travelViewSheet(id);
   else if(a==='addPhoto'){photoInput.dataset.id=id;photoInput.click();}
   else if(a==='photo')openPhoto(id,t.dataset.pid);
   else if(a==='delPhoto'){
@@ -1621,7 +1865,7 @@ document.addEventListener('click',x=>{
   else if(a==='delTrip'){
     if(t.dataset.sure){const gone=activeId;const ge=idxEntry(gone);if(ge&&ge.driveId&&!ge.noSync){idx.gone=(idx.gone||[]).concat({driveId:ge.driveId,name:ge.name});}
       try{localStorage.removeItem(tripKey(gone));localStorage.removeItem(baseKey(gone));}catch(e){}
-      idx.trips=idx.trips.filter(x=>x.id!==gone);activeId=null;data=null;load();saveIndex();closeSheet();render();scrollToFocus();}
+      idx.trips=idx.trips.filter(x=>x.id!==gone);if(!idx.trips.length){saveIndex();idx=null;try{localStorage.removeItem(IDX_KEY);}catch(e){}}activeId=null;data=null;load();saveIndex();closeSheet();render();scrollToFocus();}
     else{t.dataset.sure='1';const ge=idxEntry(activeId);t.textContent=(ge&&ge.driveId&&!ge.noSync)?'בטוחה? הטיול יימחק מהמכשיר הזה, ובסנכרון הבא גם מהדרייב':'בטוחה? הטיול יימחק מהמכשיר הזה';}
   }
   else if(a==='editDay')openDayEdit(ds);
@@ -1696,7 +1940,19 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(reloaded)return;reloaded=true;location.reload();});
 }
 
-loadSize();load();render();scrollToFocus();updateNav();
+loadSize();
+(function start(){
+  let known=false;try{known=!!(localStorage.getItem(IDX_KEY)||localStorage.getItem(KEY));}catch(e){}
+  if(VIEW_ID&&!known){
+    document.getElementById('main').innerHTML='<section class="viewbar"><b>טוענת את הטיול ששותף איתך…</b></section>';
+    openView(VIEW_ID).catch(e=>{idx=null;load();render();scrollToFocus();viewErr(e);});
+    return;
+  }
+  load();render();scrollToFocus();
+  if(VIEW_ID)openView(VIEW_ID).catch(viewErr);
+  else if(RO&&navigator.onLine)openView(data.meta.view.fileId,'silent').catch(()=>{});
+})();
+updateNav();
 setTimeout(focusIfIdle,300);
 </script>
 </body>
