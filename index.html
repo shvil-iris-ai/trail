@@ -357,7 +357,10 @@ function loadIndex(){
   idx={trips:[entry],lastOpened:id};saveIndex();
 }
 function chooseStartTrip(){
-  const t=iso(new Date()), list=idx.trips.filter(x=>x.first);
+  /* Right after an app update, reopen the trip that was open */
+  try{const k=sessionStorage.getItem('trip-app-keep');if(k){sessionStorage.removeItem('trip-app-keep');if(idxEntry(k))return k;}}catch(e){}
+  /* The sample trip always falls on "today", so it is never picked on its own */
+  const t=iso(new Date()), list=idx.trips.filter(x=>x.first&&!/\(דוגמה\)/.test(x.name||''));
   const now=list.find(x=>x.first<=t&&t<=x.last); if(now)return now.id;
   const next=list.filter(x=>x.first>t).sort((a,b)=>a.first.localeCompare(b.first))[0]; if(next)return next.id;
   return (idxEntry(idx.lastOpened)?idx.lastOpened:idx.trips[0].id);
@@ -635,7 +638,7 @@ function render(keepScroll){
     html+='</div></section>';
   });
   html+=`<div class="testline">${storageOK?'שמירה במכשיר פעילה ✓'+(lastSaved?' · נשמר '+lastSaved:''):'⚠ השמירה במכשיר לא זמינה בדפדפן הזה'} · ${esc(browserName())} · ${deviceHe()}
-    <br>נבנתה על ידי איריס, בעזרת Claude · גרסה 16</div>`;
+    <br>נבנתה על ידי איריס, בעזרת Claude · גרסה 17</div>`;
   document.getElementById('main').innerHTML=html;
   hydratePhotos(document.getElementById('main'));
   if(keepScroll)window.scrollTo(0,y);
@@ -2150,7 +2153,7 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
     setInterval(()=>reg.update().catch(()=>{}),30*60*1000);
   }).catch(()=>{});
   let reloaded=false;
-  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(reloaded)return;reloaded=true;location.reload();});
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(reloaded)return;reloaded=true;try{saveTyping();sessionStorage.setItem('trip-app-keep',activeId||'');}catch(e){}location.reload();});
 }
 
 loadSize();
