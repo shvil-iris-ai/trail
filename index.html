@@ -599,7 +599,7 @@ function render(keepScroll){
     html+='</div></section>';
   });
   html+=`<div class="testline">${storageOK?'שמירה במכשיר פעילה ✓'+(lastSaved?' · נשמר '+lastSaved:''):'⚠ השמירה במכשיר לא זמינה בדפדפן הזה'} · ${esc(browserName())} · ${deviceHe()}
-    <br>נבנתה על ידי איריס, בעזרת Claude<br><button class="reset" data-act="reset" type="button">איפוס לנתוני הדוגמה (לבדיקה בלבד)</button></div>`;
+    <br>נבנתה על ידי איריס, בעזרת Claude · גרסה 7<br><button class="reset" data-act="reset" type="button">איפוס לנתוני הדוגמה (לבדיקה בלבד)</button></div>`;
   document.getElementById('main').innerHTML=html;
   hydratePhotos(document.getElementById('main'));
   if(keepScroll)window.scrollTo(0,y);
@@ -954,19 +954,22 @@ function addrText(a){
   if(!a)return '';
   return [(a.addressLine||[]).join(' '),a.city,a.region,a.postalCode,a.country].filter(Boolean).join(', ');
 }
+/* The list of supported contact fields is read once at start, so the picker opens directly from the tap */
+let contactProps=['name','tel'];
+if(contactsSupported()){try{navigator.contacts.getProperties().then(a=>{contactProps=['name','tel','address'].filter(p=>a.includes(p));}).catch(()=>{});}catch(e){}}
 async function pickContact(t){
   const msg=document.getElementById('contactMsg');
-  try{
-    const avail=await navigator.contacts.getProperties();
-    const props=['name','tel','address'].filter(p=>avail.includes(p));
-    const res=await navigator.contacts.select(props,{multiple:false});
-    if(!res||!res.length)return;
-    const c=res[0], set=(id,v,onlyEmpty)=>{const el=document.getElementById(id);if(el&&v&&(!onlyEmpty||!el.value))el.value=v;};
-    set(t.dataset.n,(c.name||[])[0],true);
-    set(t.dataset.p,(c.tel||[])[0]);
-    const ad=addrText((c.address||[])[0]); set(t.dataset.a,ad);
-    if(msg)msg.textContent='הועתק מאנשי הקשר ✓'+(ad?'':' (לאיש הקשר הזה לא שמורה כתובת)')+((c.tel||[]).length?'':' (אין טלפון שמור)');
-  }catch(err){if(msg)msg.textContent='⚠ לא הצלחתי לפתוח את אנשי הקשר.';}
+  const say=x=>{const m=document.getElementById('contactMsg');if(m)m.textContent=x;};
+  say('פותחת את אנשי הקשר…');
+  let res;
+  try{res=await navigator.contacts.select(contactProps,{multiple:false});}
+  catch(err){say('⚠ לא הצלחתי לפתוח את אנשי הקשר ('+(err&&err.name||'שגיאה')+').');return;}
+  if(!res||!res.length){say('לא נבחר איש קשר. אחרי שבוחרים שם ברשימה, צריך ללחוץ על הכפתור בתחתית הרשימה.');return;}
+  const c=res[0], name=(c.name||[])[0]||'', tel=(c.tel||[])[0]||'', ad=addrText((c.address||[])[0]);
+  const fill=(id,v,onlyEmpty)=>{const el=document.getElementById(id);if(!el||!v)return false;if(onlyEmpty&&el.value)return true;el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}));return true;};
+  const okN=fill(t.dataset.n,name,true), okP=fill(t.dataset.p,tel), okA=fill(t.dataset.a,ad);
+  say('התקבל מאנשי הקשר: '+(name||'בלי שם')+' · טלפון: '+(tel||'אין')+' · כתובת: '+(ad||'אין'+(contactProps.includes('address')?'':' (הטלפון לא מאפשר משיכת כתובת)'))
+      +((tel&&!okP)||(ad&&!okA)?' · ⚠ לא הצלחתי למלא את השדות':' · עכשיו ללחוץ "שמירה" בתחתית הטופס'));
 }
 
 /* Add: choose what kind of item */
