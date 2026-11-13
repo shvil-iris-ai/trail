@@ -620,7 +620,7 @@ function render(keepScroll){
     html+='</div></section>';
   });
   html+=`<div class="testline">${storageOK?'שמירה במכשיר פעילה ✓'+(lastSaved?' · נשמר '+lastSaved:''):'⚠ השמירה במכשיר לא זמינה בדפדפן הזה'} · ${esc(browserName())} · ${deviceHe()}
-    <br>נבנתה על ידי איריס, בעזרת Claude · גרסה 12<br><button class="reset" data-act="reset" type="button">איפוס לנתוני הדוגמה (לבדיקה בלבד)</button></div>`;
+    <br>נבנתה על ידי איריס, בעזרת Claude · גרסה 13<br><button class="reset" data-act="reset" type="button">איפוס לנתוני הדוגמה (לבדיקה בלבד)</button></div>`;
   document.getElementById('main').innerHTML=html;
   hydratePhotos(document.getElementById('main'));
   if(keepScroll)window.scrollTo(0,y);
@@ -1430,7 +1430,7 @@ function writeTripLocal(id,trip,keepFrom){
 function syncProgress(t){openSheet(`<h3>סנכרון</h3><p id="syncStep">${esc(t)}</p><div class="saved" id="syncMsg"></div>`);}
 function step(t){const s=document.getElementById('syncStep');if(s)s.textContent=t;else syncProgress(t);}
 
-async function runSync(){
+async function runSync(opts){
   if(syncing)return;syncing=true;
   saveTyping();save();
   const report={trips:0,got:0,sent:0,newHere:0,newThere:0,photosUp:0,photosDown:0,removed:0,photoFail:0};
@@ -1556,7 +1556,7 @@ async function runSync(){
     if(report.photoFail)lines.push('⚠ '+report.photoFail+' תמונות לא עברו. הן יעברו בסנכרון הבא.');
     if(report.views)lines.push(report.views===1?'עותק הצפייה של הטיול המשותף עודכן.':'עודכנו '+report.views+' עותקי צפייה.');
     if(report.removed)lines.push('טיולים שנמחקו מכאן: '+report.removed+'.');
-    openSheet(`<h3>הסנכרון הסתיים ✓</h3>${lines.map(l=>`<p>${esc(l)}</p>`).join('')}<div class="btns" style="margin-top:1rem"><button class="b p" data-act="close" type="button">סגירה</button></div>`);
+    if(opts&&opts.then)opts.then(lines);else openSheet(`<h3>הסנכרון הסתיים ✓</h3>${lines.map(l=>`<p>${esc(l)}</p>`).join('')}<div class="btns" style="margin-top:1rem"><button class="b p" data-act="close" type="button">סגירה</button></div>`);
   }catch(e){
     if(e&&e.kind==='cancel'){closeSheet();}
     else openSheet(`<h3>הסנכרון לא הושלם</h3><p>${esc(errText(e))}</p><p class="locline">שינויים שכבר נשמרו נשארים. מה שלא הסתיים ימשיך בסנכרון הבא.</p>
@@ -1670,7 +1670,10 @@ function sharePublish(){
       data.meta.share=Object.assign({},data.meta.share||{},{opts:o,owner});
       const sh=await publishView(data,folder,pm);
       if(tid!==activeId)return;
-      data.meta.share=sh;const en=idxEntry(activeId);if(en)en.viewPublished=stamp();save();openShare();
+      data.meta.share=sh;const en=idxEntry(activeId);if(en)en.viewPublished=stamp();save();
+      shareBusy=false;
+      if(en&&!en.noSync){await runSync({then:()=>{openShare();syncMsg('הקישור מוכן ✓ השיתוף סונכרן, כך שגם המכשיר השני יעדכן את השותפים מהסנכרון הבא שלו.');}});}
+      else openShare();
     }catch(e){syncMsg(errText(e));}
     finally{shareBusy=false;}
   });
@@ -1684,7 +1687,9 @@ function shareStop(t){
       try{await gd('files/'+sh.fileId,{method:'DELETE'});}catch(e){if(!(e.kind==='http'&&e.status===404))throw e;}
       if((sh.pubPhotos||[]).length){const pm=await photoMapNow();for(const pid of sh.pubPhotos){if(pm.has(pid)){try{await gd('files/'+pm.get(pid)+'/permissions/anyoneWithLink',{method:'DELETE'});}catch(e){}}}}
       delete data.meta.share;save();
-      openSheet(`<h3>השיתוף הופסק</h3><p>הקישור כבר לא עובד. מי שהתקין את האפליקציה ישמור את הגרסה האחרונה שראה, בלי עדכונים.</p><p class="locline">כדי שגם המכשיר השני יידע שהשיתוף הופסק, כדאי לסנכרן.</p>`);
+      const done=()=>openSheet(`<h3>השיתוף הופסק</h3><p>הקישור כבר לא עובד. מי שהתקין את האפליקציה ישמור את הגרסה האחרונה שראה, בלי עדכונים.</p>`);
+      const en=idxEntry(activeId);
+      if(en&&!en.noSync)await runSync({then:done});else done();
     }catch(e){syncMsg(errText(e));}
   });
 }
