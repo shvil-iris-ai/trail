@@ -176,6 +176,7 @@ a.b{display:flex;align-items:center;justify-content:center;text-decoration:none;
 .chooser{display:flex;flex-direction:column;gap:.5rem;margin-top:.8rem}
 .chooser .b{min-height:3.2rem;font-size:1rem;justify-content:flex-start;display:flex;align-items:center;gap:.6rem;padding:0 1rem}
 .chooser svg{width:1.4rem;height:1.4rem}
+.dur .dl{display:block;margin-top:.6rem;font-size:.85rem;color:var(--ink-soft)}
 .cmp{background:var(--paper);border-radius:.8rem;padding:.6rem .7rem;margin-top:.6rem;display:flex;flex-direction:column;gap:.3rem}
 .cmp .k{font-weight:700;color:var(--purple-dark)}
 .cmp .v{font-size:.95rem;white-space:pre-wrap;overflow-wrap:anywhere}
@@ -236,6 +237,20 @@ function uid(){return 'e'+Date.now().toString(36)+Math.random().toString(36).sli
 function nowHM(){const n=new Date();return String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0');}
 function dayLabel(ds){const[y,m,d]=ds.split('-').map(Number);return new Date(y,m-1,d).toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long'});}
 function stamp(){return new Date().toISOString();}
+function fmtDur(m){m=Math.round(Number(m)||0);if(m<60)return m+' דק׳';const h=Math.floor(m/60),r=m%60;
+  const hs=h===1?'שעה':h===2?'שעתיים':h+' שעות';return r?hs+' ו-'+r+' דק׳':hs;}
+/* Two boxes (hours and minutes) that fill one hidden field holding the total in minutes */
+function durField(label,name,id,val,maxH){
+  const v=Number(val)||0,has=val!==''&&val!==undefined&&val!==null;
+  return `<div class="f dur"><span class="dl">${label}</span><div class="pair">
+    <label class="f" style="margin-top:.2rem">שעות<input type="number" min="0" max="${maxH||12}" data-dur="${id}" data-part="h" value="${has&&v>=60?Math.floor(v/60):''}" inputmode="numeric"></label>
+    <label class="f" style="margin-top:.2rem">דקות<input type="number" min="0" max="59" data-dur="${id}" data-part="m" value="${has?v%60:''}" inputmode="numeric"></label></div>
+    <input type="hidden" name="${name}" id="${id}" value="${has?v:''}"></div>`;
+}
+document.addEventListener('input',x=>{const t=x.target;if(!t.dataset||!t.dataset.dur)return;
+  const id=t.dataset.dur,hEl=document.querySelector('[data-dur="'+id+'"][data-part="h"]'),mEl=document.querySelector('[data-dur="'+id+'"][data-part="m"]');
+  const hv=hEl.value.trim(),mv=mEl.value.trim(),out=document.getElementById(id);
+  out.value=(hv===''&&mv==='')?'':String((Number(hv)||0)*60+(Number(mv)||0));});
 function minusMin(hm,min){const[h,m]=hm.split(':').map(Number);let t=h*60+m-Number(min);t=((t%1440)+1440)%1440;return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');}
 function device(){return /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)?'phone':'computer';}
 function deviceHe(){return device()==='phone'?'טלפון':'מחשב';}
@@ -490,7 +505,7 @@ function travelRow(prev,e,past){
   }
   const target=isFlight(e)?minusMin(e.time,e.airportBuffer||180):e.time;
   const leave=minusMin(target,e.travelMin);
-  return `<div class="trow"><div class="mkcol"></div><div class="tr ${past?'past':''}">${md.icon}<span>${prev.isStay?'מהמלון · ':''}${md.name} · ${esc(e.travelMin)} דק׳${e.travelEst?' (משוער)':''}</span>${isFlight(e)?`<b>להגיע לשדה עד <span dir="ltr">${target}</span></b>`:''}<b>לצאת עד <span dir="ltr">${leave}</span></b>${(e.travelStale||(e.travelFrom!==undefined&&e.travelFrom!==prev.id))?'<b style="color:var(--red)">· לבדוק שוב, התחנה הקודמת השתנתה</b>':''}
+  return `<div class="trow"><div class="mkcol"></div><div class="tr ${past?'past':''}">${md.icon}<span>${prev.isStay?'מהמלון · ':''}${md.name} · ${fmtDur(e.travelMin)}${e.travelEst?' (משוער)':''}</span>${isFlight(e)?`<b>להגיע לשדה עד <span dir="ltr">${target}</span></b>`:''}<b>לצאת עד <span dir="ltr">${leave}</span></b>${(e.travelStale||(e.travelFrom!==undefined&&e.travelFrom!==prev.id))?'<b style="color:var(--red)">· לבדוק שוב, התחנה הקודמת השתנתה</b>':''}
     ${RO?(e.travelNote?`<button class="gm" style="background:none;border:0;padding:0;font:inherit" data-act="travelView" data-id="${e.id}" type="button">פרטי המסלול</button>`:''):`<button class="gm" style="background:none;border:0;padding:0;font:inherit" data-act="travel" data-id="${e.id}" type="button">${e.travelNote?'פרטי המסלול ותיקון':'תיקון'}</button>`}
     <a class="gm" href="${url}" target="_blank" rel="noopener">בדיקה ב-Google Maps</a></div></div>`;
 }
@@ -501,10 +516,8 @@ function openTravel(id){
   openSheet(`<h3>נסיעה</h3>
     <div class="m">${prev?esc(isFlight(prev)?(prev.toName||prev.toCode):prev.title)+' ← ':''}${esc(isFlight(e)?(e.fromName||e.fromCode):e.title)} · ${isFlight(e)?'להגיע לשדה עד <span dir="ltr">'+minusMin(e.time,e.airportBuffer||180)+'</span>':'מגיעים ב-<span dir="ltr">'+esc(e.time)+'</span>'}</div>
     <form id="trForm">
-      <div class="pair">
-        <label class="f">איך מגיעים<select name="travelMode" id="t_mode">${opt('walk')}${opt('transit')}${opt('car')}</select></label>
-        <label class="f">כמה דקות<input type="number" min="0" max="600" name="travelMin" id="t_min" value="${esc(e.travelMin)}" inputmode="numeric"></label>
-      </div>
+      <label class="f">איך מגיעים<select name="travelMode" id="t_mode">${opt('walk')}${opt('transit')}${opt('car')}</select></label>
+      ${durField('זמן הנסיעה','travelMin','t_min',e.travelMin)}
       <label class="f">פרטי המסלול (קו ותחנות, מספר אוטובוס, דרך מועדפת וכדומה)<textarea name="travelNote" id="t_note" rows="3" placeholder="למשל: קו אדום מתחנת יהודית לאליפלט, 6 דקות. משם ברגל דרך רחוב יפת">${esc(e.travelNote||'')}</textarea></label>
       ${prev?`<p class="m" style="margin-top:.6rem">לא בטוחה? <a class="gm" id="t_gm" href="${gmUrl(prev,e)}" target="_blank" rel="noopener">בדיקה ב-Google Maps</a></p>`:''}
       <div class="btns" style="margin-top:1rem"><button class="b p" type="submit">שמירה</button></div>
@@ -519,7 +532,7 @@ function openTravel(id){
     e.updated=stamp();
     save();closeSheet();render(true);
   };
-  if(!e.travelMin)setTimeout(()=>{const m=document.getElementById('t_min');if(m)m.focus();},50);
+  if(!e.travelMin)setTimeout(()=>{const m=document.querySelector('[data-dur="t_min"][data-part="h"]');if(m)m.focus();},50);
 }
 
 function render(keepScroll){
@@ -622,7 +635,7 @@ function render(keepScroll){
     html+='</div></section>';
   });
   html+=`<div class="testline">${storageOK?'שמירה במכשיר פעילה ✓'+(lastSaved?' · נשמר '+lastSaved:''):'⚠ השמירה במכשיר לא זמינה בדפדפן הזה'} · ${esc(browserName())} · ${deviceHe()}
-    <br>נבנתה על ידי איריס, בעזרת Claude · גרסה 15</div>`;
+    <br>נבנתה על ידי איריס, בעזרת Claude · גרסה 16</div>`;
   document.getElementById('main').innerHTML=html;
   hydratePhotos(document.getElementById('main'));
   if(keepScroll)window.scrollTo(0,y);
@@ -803,10 +816,8 @@ function openEdit(id,date){
       <label class="f">כתובת (מוצגת לנהג ומשמשת לחישוב המסלול)<input name="address" id="f_address" value="${esc(e.address)}" dir="ltr"></label>
       <div class="pair"><label class="f">טלפון<input name="phone" id="f_phone" value="${esc(e.phone||'')}" dir="ltr" inputmode="tel"></label>
         <label class="f">מייל<input type="email" name="email" id="f_email" value="${esc(e.email||'')}" dir="ltr"></label></div>
-      <div class="pair">
-        <label class="f">הגעה מהתחנה הקודמת<select name="travelMode" id="f_travelMode">${opt('walk')}${opt('transit')}${opt('car')}</select></label>
-        <label class="f">זמן נסיעה (דקות)<input type="number" min="0" max="600" name="travelMin" id="f_travelMin" value="${esc(e.travelMin)}" inputmode="numeric"></label>
-      </div>
+      <label class="f">הגעה מהתחנה הקודמת<select name="travelMode" id="f_travelMode">${opt('walk')}${opt('transit')}${opt('car')}</select></label>
+      ${durField('זמן נסיעה','travelMin','f_travelMin',e.travelMin)}
       <label class="f">פרטים<textarea name="details" id="f_details">${esc(e.details)}</textarea></label>
       <label class="f">רקע קצר<textarea name="bgShort" id="f_bgShort">${esc(e.bgShort)}</textarea></label>
       <label class="f">פרטים מעניינים<textarea name="bgMore" id="f_bgMore">${esc(e.bgMore)}</textarea></label>
@@ -1017,8 +1028,8 @@ function openFlightEdit(id,date){
       <div class="pair"><label class="f">קוד הזמנה<input name="booking" id="fl_booking" value="${esc(e.booking)}" dir="ltr"></label>
         <label class="f">מושב<input name="seat" id="fl_seat" value="${esc(e.seat)}" dir="ltr"></label></div>
       <label class="f">מזוודות<input name="baggage" id="fl_bag" value="${esc(e.baggage)}"></label>
-      <div class="pair"><label class="f">הגעה לשדה<select name="travelMode" id="fl_mode">${mo('car')}${mo('transit')}${mo('walk')}</select></label>
-        <label class="f">זמן נסיעה לשדה (דקות)<input type="number" min="0" max="600" name="travelMin" id="fl_tmin" value="${esc(e.travelMin)}"></label></div>
+      <label class="f">הגעה לשדה<select name="travelMode" id="fl_mode">${mo('car')}${mo('transit')}${mo('walk')}</select></label>
+      ${durField('זמן נסיעה לשדה','travelMin','fl_tmin',e.travelMin)}
       <div class="btns" style="margin-top:1rem"><button class="b p" type="submit">שמירה</button>
       ${id?`<button class="b r" type="button" data-act="del" data-id="${id}">מחיקה</button>`:''}</div>
     </form>`);
@@ -1754,7 +1765,7 @@ function installHelp(){
 function travelViewSheet(id){
   const e=ev(id);if(!e)return;const md=MODE[e.travelMode]||MODE.walk;
   openSheet(`<h3>נסיעה</h3><div class="m">אל ${esc(stopTitle(e))}</div>
-    <p>${esc(md.name)}${e.travelMin?' · '+esc(e.travelMin)+' דק׳':''}</p>${e.travelNote?`<p style="white-space:pre-wrap">${esc(e.travelNote)}</p>`:''}`);
+    <p>${esc(md.name)}${e.travelMin?' · '+fmtDur(e.travelMin):''}</p>${e.travelNote?`<p style="white-space:pre-wrap">${esc(e.travelNote)}</p>`:''}`);
 }
 const RO_BLOCK=new Set(['newDay','editDay','done','summary','exportDay','exportAll','add','status','swap','undoSwap','pickAlt','doSwap','addPhoto','delPhoto',
   'myLoc','edit','editFlight','stayEdit','stayDel','stayLoc','travel','reset','addStop','addFlight','addStay','del','delDay','share','sharePublish','shareStop','updateTrip','pasteContact','fillContact']);
@@ -1788,18 +1799,18 @@ function homeRow(which,day){
   if(!s.min)mid=`<span>${esc(from)} · זמן הנסיעה לא הוזן${s.address?'':' · עוד לא הוזנה כתובת'}</span>`;
   else if(which==='start'){
     const target=isFlight(e)?minusMin(e.time,e.airportBuffer||180):e.time;
-    mid=`<span>${esc(from)} · ${md.name} · ${esc(s.min)} דק׳</span><b>לצאת עד <span dir="ltr">${minusMin(target,s.min)}</span></b>`;
+    mid=`<span>${esc(from)} · ${md.name} · ${fmtDur(s.min)}</span><b>לצאת עד <span dir="ltr">${minusMin(target,s.min)}</span></b>`;
   }else{
     const dep=isFlight(e)?plusMin(e.arrTime||e.time,s.after||45):plusMin(s.departTime||e.time,0);
     const arr=plusMin(dep.hm,s.min);
-    mid=`<span>${esc(from)} · ${md.name} · ${esc(s.min)} דק׳</span><b>הגעה בערך <span dir="ltr">${arr.hm}</span>${(arr.next||dep.next)?' (למחרת)':''}</b>`;
+    mid=`<span>${esc(from)} · ${md.name} · ${fmtDur(s.min)}</span><b>הגעה בערך <span dir="ltr">${arr.hm}</span>${(arr.next||dep.next)?' (למחרת)':''}</b>`;
   }
   const html=`<div class="trow"><div class="mkcol"></div><div class="tr">${md.icon}${mid}${btn}${gm}</div></div>`;
   return html;
 }
 function openHome(which){
   const h=homeInfo(which);if(!h)return;const {e,s}=h;
-  if(RO){openSheet(`<h3>${which==='start'?'היציאה':'החזרה'}</h3><p>${esc((MODE[s.mode]||MODE.car).name)}${s.min?' · '+esc(s.min)+' דק׳':''}</p>${s.note?`<p style="white-space:pre-wrap">${esc(s.note)}</p>`:''}`);return;}
+  if(RO){openSheet(`<h3>${which==='start'?'היציאה':'החזרה'}</h3><p>${esc((MODE[s.mode]||MODE.car).name)}${s.min?' · '+fmtDur(s.min):''}</p>${s.note?`<p style="white-space:pre-wrap">${esc(s.note)}</p>`:''}`);return;}
   const opt=v=>`<option value="${v}" ${s.mode===v?'selected':''}>${MODE[v].name}</option>`;
   const fl=isFlight(e);
   openSheet(`<h3>${which==='start'?'יציאה לטיול':'חזרה מהטיול'}</h3>
@@ -1808,8 +1819,8 @@ function openHome(which){
       <div class="pair"><label class="f">שם קצר<input name="label" value="${esc(s.label)}"></label>
         <label class="f">דרך הנסיעה<select name="mode">${opt('car')}${opt('transit')}${opt('walk')}</select></label></div>
       <label class="f">${which==='start'?'יוצאים מכתובת':'חוזרים לכתובת'}<input name="address" value="${esc(s.address)}" dir="auto" placeholder="${myHome()?'':'אפשר לשמור את הכתובת שלך בתפריט'}"></label>
-      <div class="pair"><label class="f">זמן נסיעה (דקות)<input type="number" min="0" max="2000" name="min" value="${esc(s.min)}" inputmode="numeric"></label>
-      ${which==='end'?(fl?`<label class="f">מהנחיתה עד היציאה מהשדה (דקות)<input type="number" min="0" max="600" name="after" value="${esc(s.after)}" inputmode="numeric"></label>`
+      ${durField('זמן הנסיעה','min','hm_min',s.min,30)}
+      <div class="pair">${which==='end'?(fl?`<label class="f">מהנחיתה עד היציאה מהשדה (דקות)<input type="number" min="0" max="600" name="after" value="${esc(s.after)}" inputmode="numeric"></label>`
         :`<label class="f">שעת היציאה הביתה (לא חובה)<input type="time" name="departTime" value="${esc(s.departTime)}"></label>`):''}</div>
       <label class="f">פרטי המסלול (לא חובה)<textarea name="note" rows="3" placeholder="למשל: עצירה בצומת הערבה, הרכבת של 07:12">${esc(s.note)}</textarea></label>
       <p class="locline">${which==='end'&&!fl?'בלי שעת יציאה, החישוב מתחיל משעת התחנה האחרונה.':''} השותפים בצפייה רואים את השעות בלי הכתובת.</p>
