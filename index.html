@@ -480,7 +480,7 @@ function travelRow(prev,e,past){
     <a class="gm" href="${url}" target="_blank" rel="noopener">בדיקה ב-Google Maps</a></div></div>`;
 }
 function openTravel(id){
-  const e=ev(id); if(!e)return;
+  let e=ev(id); if(!e)return;
   const prev=prevPoint(e);
   const opt=v=>`<option value="${v}" ${(e.travelMode||'walk')===v?'selected':''}>${MODE[v].name}</option>`;
   openSheet(`<h3>זמן נסיעה</h3>
@@ -495,7 +495,7 @@ function openTravel(id){
     </form>`);
   const sel=document.getElementById('t_mode'), gm=document.getElementById('t_gm');
   sel.onchange=()=>{if(gm&&prev){gm.href=gmUrl(prev,Object.assign({},e,{travelMode:sel.value}));}};
-  document.getElementById('trForm').onsubmit=x=>{
+  document.getElementById('trForm').onsubmit=x=>{e=ev(id)||e;
     x.preventDefault();
     e.travelMode=sel.value; e.travelMin=document.getElementById('t_min').value; e.travelEst=false; e.travelStale=false; e.travelFrom=prev?prev.id:null; e.updated=stamp();
     save();closeSheet();render(true);
@@ -765,7 +765,7 @@ async function openDayMap(ds){
 }
 
 function openEdit(id,date){
-  const e=id?ev(id):{id:null,date,time:'12:00',title:'',local:'',address:'',details:'',bgShort:'',bgMore:'',travelMode:'walk',travelMin:'',travelEst:false};
+  let e=id?ev(id):{id:null,date,time:'12:00',title:'',local:'',address:'',details:'',bgShort:'',bgMore:'',travelMode:'walk',travelMin:'',travelEst:false};
   const opt=v=>`<option value="${v}" ${e.travelMode===v?'selected':''}>${MODE[v].name}</option>`;
   openSheet(`<h3>${id?'עריכת תחנה':'תחנה חדשה'}</h3>
     <form id="evForm">
@@ -789,7 +789,7 @@ function openEdit(id,date){
       <div class="btns" style="margin-top:1rem"><button class="b p" type="submit">שמירה</button>
       ${id?`<button class="b r" type="button" data-act="del" data-id="${id}">מחיקה</button>`:''}</div>
     </form>`);
-  document.getElementById('evForm').onsubmit=x=>{
+  document.getElementById('evForm').onsubmit=x=>{if(id)e=ev(id)||e;
     x.preventDefault();
     const f=Object.fromEntries(new FormData(x.target).entries());
     if(id){
@@ -911,7 +911,7 @@ function dayFormFields(d){
     <label class="f">שורה קצרה מתחת לשם (לא חובה)<input name="sub" id="d_sub" value="${esc(d.sub||'')}" placeholder="למשל: יום ברכב"></label>`;
 }
 function openDayEdit(ds){
-  const d=dayOf(ds); if(!d)return;
+  let d=dayOf(ds); if(!d)return;
   const hasStops=eventsOf(ds).length>0;
   openSheet(`<h3>עריכת היום</h3><div class="m">${esc(dayLabel(ds))}</div>
     <form id="dayForm">${dayFormFields(Object.assign({},d,{city:dayCity(d)}))}
@@ -919,7 +919,7 @@ function openDayEdit(ds){
       ${hasStops?'':`<button class="b r" type="button" data-act="delDay" data-date="${ds}">מחיקת היום</button>`}</div>
       ${hasStops?'<p class="locline">אפשר למחוק יום רק כשאין בו תחנות.</p>':''}
     </form>`);
-  document.getElementById('dayForm').onsubmit=x=>{
+  document.getElementById('dayForm').onsubmit=x=>{d=dayOf(ds)||d;
     x.preventDefault();const f=Object.fromEntries(new FormData(x.target).entries());
     Object.assign(d,f,{updated:stamp()});save();closeSheet();render(true);
   };
@@ -981,7 +981,7 @@ function openAddChooser(ds){
 
 /* Flights */
 function openFlightEdit(id,date){
-  const e=id?ev(id):{date,time:'06:00',airline:'',flightNo:'',fromCode:'',fromName:'',terminal:'',toCode:'',toName:'',arrTime:'',arrPlusDays:'0',airportBuffer:'180',booking:'',seat:'',baggage:'',travelMode:'car',travelMin:''};
+  let e=id?ev(id):{date,time:'06:00',airline:'',flightNo:'',fromCode:'',fromName:'',terminal:'',toCode:'',toName:'',arrTime:'',arrPlusDays:'0',airportBuffer:'180',booking:'',seat:'',baggage:'',travelMode:'car',travelMin:''};
   const mo=v=>`<option value="${v}" ${(e.travelMode||'car')===v?'selected':''}>${MODE[v].name}</option>`;
   openSheet(`<h3>${id?'עריכת טיסה':'טיסה חדשה'}</h3>
     <p class="locline">כל שעה לפי השעון המקומי במקום שלה: ההמראה לפי שדה ההמראה, והנחיתה לפי שדה הנחיתה.</p>
@@ -1006,7 +1006,7 @@ function openFlightEdit(id,date){
       <div class="btns" style="margin-top:1rem"><button class="b p" type="submit">שמירה</button>
       ${id?`<button class="b r" type="button" data-act="del" data-id="${id}">מחיקה</button>`:''}</div>
     </form>`);
-  document.getElementById('flForm').onsubmit=x=>{
+  document.getElementById('flForm').onsubmit=x=>{if(id)e=ev(id)||e;
     x.preventDefault();
     const f=Object.fromEntries(new FormData(x.target).entries());
     f.airportBuffer=String(Math.round((parseFloat(f.bufferH)||3)*60)); delete f.bufferH;
@@ -1045,7 +1045,7 @@ function openStay(sid){
     <div class="saved" id="locMsg"></div>`);
 }
 function openStayEdit(sid,date){
-  const st=sid?stayById(sid):{name:'',local:'',address:'',phone:'',checkinDate:date,checkinTime:'15:00',checkoutDate:shiftDate(date,1),checkoutTime:'11:00',booking:'',cancelPolicy:'',notes:''};
+  let st=sid?stayById(sid):{name:'',local:'',address:'',phone:'',checkinDate:date,checkinTime:'15:00',checkoutDate:shiftDate(date,1),checkoutTime:'11:00',booking:'',cancelPolicy:'',notes:''};
   openSheet(`<h3>${sid?'עריכת לינה':'לינה חדשה'}</h3>
     <form id="stForm">
       <label class="f">שם המלון<input name="name" id="st_name" value="${esc(st.name)}" required></label>
@@ -1064,7 +1064,7 @@ function openStayEdit(sid,date){
       <div class="btns" style="margin-top:1rem"><button class="b p" type="submit">שמירה</button>
       ${sid?`<button class="b r" type="button" data-act="stayDel" data-sid="${sid}">מחיקה</button>`:''}</div>
     </form>`);
-  document.getElementById('stForm').onsubmit=x=>{
+  document.getElementById('stForm').onsubmit=x=>{if(sid)st=stayById(sid)||st;
     x.preventDefault();
     const f=Object.fromEntries(new FormData(x.target).entries());
     if(f.checkoutDate<=f.checkinDate){document.getElementById('stMsg').textContent='⚠ תאריך הצ׳ק-אאוט צריך להיות אחרי תאריך הצ׳ק-אין.';return;}
@@ -1303,7 +1303,7 @@ document.getElementById('nextDay').onclick=()=>jumpDay(1);
 document.getElementById('menuBtn').onclick=()=>{saveTyping();openMenu();};
 
 /* Always show the saved version when the page comes back into view */
-function refresh(){load();render(true);}
+function refresh(){if(sheet.hidden){load();}render(true);}
 /* Opening position: always start at today's current stop. The browser's own scroll memory is switched off,
    and the jump is repeated after fonts load (which shifts the layout) unless the user already started scrolling.
    Coming back after more than 2 minutes away also returns to today's stop. */
