@@ -176,6 +176,11 @@ a.b{display:flex;align-items:center;justify-content:center;text-decoration:none;
 .chooser{display:flex;flex-direction:column;gap:.5rem;margin-top:.8rem}
 .chooser .b{min-height:3.2rem;font-size:1rem;justify-content:flex-start;display:flex;align-items:center;gap:.6rem;padding:0 1rem}
 .chooser svg{width:1.4rem;height:1.4rem}
+.cmp{background:var(--paper);border-radius:.8rem;padding:.6rem .7rem;margin-top:.6rem;display:flex;flex-direction:column;gap:.3rem}
+.cmp .k{font-weight:700;color:var(--purple-dark)}
+.cmp .v{font-size:.95rem;white-space:pre-wrap;overflow-wrap:anywhere}
+label.chk{display:flex;gap:.6rem;align-items:center;color:var(--ink)}
+label.chk input{width:1.4rem;height:1.4rem;flex:none}
 .driver{position:fixed;inset:0;z-index:30;background:var(--white);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:1rem;padding:2rem 1.2rem;text-align:center}
 .driver[hidden]{display:none}
 .driver .big{font-size:2.6rem;font-weight:700;line-height:1.1;direction:ltr}
@@ -603,7 +608,7 @@ function render(keepScroll){
     html+='</div></section>';
   });
   html+=`<div class="testline">${storageOK?'שמירה במכשיר פעילה ✓'+(lastSaved?' · נשמר '+lastSaved:''):'⚠ השמירה במכשיר לא זמינה בדפדפן הזה'} · ${esc(browserName())} · ${deviceHe()}
-    <br>נבנתה על ידי איריס, בעזרת Claude · גרסה 9<br><button class="reset" data-act="reset" type="button">איפוס לנתוני הדוגמה (לבדיקה בלבד)</button></div>`;
+    <br>נבנתה על ידי איריס, בעזרת Claude · גרסה 10<br><button class="reset" data-act="reset" type="button">איפוס לנתוני הדוגמה (לבדיקה בלבד)</button></div>`;
   document.getElementById('main').innerHTML=html;
   hydratePhotos(document.getElementById('main'));
   if(keepScroll)window.scrollTo(0,y);
@@ -638,7 +643,7 @@ window.addEventListener('scroll',()=>{clearTimeout(navTimer);navTimer=setTimeout
 /* Sheets */
 const sheet=document.getElementById('sheet'), panel=document.getElementById('panel'), driver=document.getElementById('driver');
 function openSheet(h){panel.innerHTML='<button class="close" data-act="close" type="button" aria-label="סגירה">✕</button>'+h;sheet.hidden=false;panel.scrollTop=0;}
-function closeSheet(){sheet.hidden=true;panel.innerHTML='';}
+function closeSheet(){sheet.hidden=true;panel.innerHTML='';if(typeof pendingAsk==='function'){const p=pendingAsk;pendingAsk=null;p('cancel');}}
 
 function openDetails(id){
   const e=ev(id); if(!e)return;
@@ -826,10 +831,16 @@ function showDriver(big,addr,he){
 function openMenu(){
   const cur=document.documentElement.dataset.size||'large';
   const sz=(v,l)=>`<button class="b ${cur===v?'on':''}" data-act="size" data-size="${v}" type="button">${l}</button>`;
+  const ss=syncState();
   openSheet(`<h3>תפריט</h3>
     <div class="chooser"><button class="b p" data-act="trips" type="button">${BED.replace('#6B3FA0','#FFFFFF').replace('#6B3FA0','#FFFFFF')}<span>הטיולים שלי</span></button></div>
     <h4>גודל הטקסט</h4><div class="sizes">${sz('big','רגיל')}${sz('large','גדול')}${sz('huge','גדול מאוד')}</div>
-    <h4>סנכרון</h4><p class="locline">הסנכרון בין המחשב לטלפון יגיע בעדכון הבא.</p>`);
+    <h4>סנכרון בין המכשירים</h4>
+    <p class="locline">${ss.lastSync?'סנכרון אחרון במכשיר הזה: '+esc(fmtWhen(ss.lastSync)):'עוד לא היה סנכרון במכשיר הזה.'} הטיולים נשמרים בתיקייה "שביל – הטיולים שלי" בדרייב שלך.</p>
+    <div class="btns"><button class="b g" data-act="sync" type="button">סנכרון עכשיו</button></div>
+    <div class="saved" id="syncMsg"></div>
+    ${ss.consented?'<div class="btns"><button class="b" data-act="syncOff" type="button">ניתוק מגוגל במכשיר הזה</button></div>':''}`);
+  if(navigator.onLine)loadGis().catch(()=>{});
 }
 function openTrips(){
   save();
@@ -880,12 +891,13 @@ function openTripEdit(){
       <label class="f">שם הטיול<input name="name" id="te_name" value="${esc(data.meta.name)}" required></label>
       <label class="f">כמה שורות על הטיול<textarea name="notes" id="te_notes" rows="3">${esc(data.meta.notes||'')}</textarea></label>
       <p class="locline">התאריכים ומספר הימים מחושבים מהימים שבטיול. כדי לשנות אותם, מוסיפים או מוחקים ימים.</p>
+      <label class="f chk"><input type="checkbox" name="sync" ${idxEntry(activeId).noSync?'':'checked'}> לסנכרן את הטיול הזה בין המכשירים</label>
       <div class="btns" style="margin-top:1rem"><button class="b p" type="submit">שמירה</button>
       ${many?'<button class="b r" type="button" data-act="delTrip">מחיקת הטיול</button>':''}</div>
     </form>`);
   document.getElementById('teForm').onsubmit=x=>{
     x.preventDefault();const f=Object.fromEntries(new FormData(x.target).entries());
-    data.meta.name=f.name;data.meta.notes=f.notes;save();closeSheet();render(true);
+    data.meta.name=f.name;data.meta.notes=f.notes;const en=idxEntry(activeId);en.noSync=!f.sync;save();closeSheet();render(true);
   };
 }
 /* Load a trip from a file made by "export whole trip" (or a trip file prepared for you) */
@@ -1190,6 +1202,339 @@ document.addEventListener('input',x=>{
   if(x.target.id==='noteBox'||x.target.id==='sumBox'){clearTimeout(typingTimer);typingTimer=setTimeout(saveTyping,500);}
 });
 
+/* ===== Sync between devices through the user's own Google Drive =====
+   Each trip is one file in a Drive folder "שביל – הטיולים שלי"; photos are separate image files.
+   The app can see only files it created itself (drive.file). A copy of the last synced version (the "base")
+   is kept on each device, so the app can tell what changed here, what changed on the other device,
+   and ask only when the same detail was changed differently in both places. */
+const G_CLIENT='362027259734-mvtaj0fccg5p45kao0iag4j5jh9k6dlq.apps.googleusercontent.com';
+const G_SCOPE='https://www.googleapis.com/auth/drive.file';
+const SYNC_KEY='trip-app-sync';
+let gTok=null,gExp=0,tokClient=null,gisP=null,syncing=false,pendingAsk=null;
+function syncState(){try{return JSON.parse(localStorage.getItem(SYNC_KEY)||'{}');}catch(e){return {};}}
+function setSyncState(p){try{localStorage.setItem(SYNC_KEY,JSON.stringify(Object.assign(syncState(),p)));}catch(e){}}
+function baseKey(id){return 'trip-app-base-'+id;}
+function loadGis(){
+  if(window.google&&google.accounts&&google.accounts.oauth2)return Promise.resolve();
+  if(gisP)return gisP;
+  gisP=new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.async=true;
+    s.onload=()=>res();s.onerror=()=>{gisP=null;s.remove();rej(new Error('gis'));};document.head.appendChild(s);});
+  return gisP;
+}
+function syncMsg(t){const m=document.getElementById('syncMsg');if(m)m.textContent=t;}
+function fmtWhen(s){if(!s)return '';const d=new Date(s);return d.toLocaleDateString('he-IL',{day:'numeric',month:'numeric'})+' בשעה '+d.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});}
+/* Must run directly inside the click, so the Google sign-in window is not blocked */
+function startSync(){
+  if(syncing)return;
+  if(!navigator.onLine){syncMsg('⚠ אין חיבור לאינטרנט. הסנכרון צריך אינטרנט, כל השאר עובד גם בלעדיו.');return;}
+  if(gTok&&Date.now()<gExp-60000){runSync();return;}
+  if(!(window.google&&google.accounts&&google.accounts.oauth2)){
+    syncMsg('מתחברת לגוגל…');
+    loadGis().then(()=>syncMsg('מוכן. לחצי שוב על "סנכרון עכשיו".')).catch(()=>syncMsg('⚠ לא הצלחתי להגיע לגוגל. בדקי את החיבור לאינטרנט ונסי שוב.'));
+    return;
+  }
+  if(!tokClient)tokClient=google.accounts.oauth2.initTokenClient({client_id:G_CLIENT,scope:G_SCOPE,
+    callback:r=>{
+      if(r.error){syncMsg(r.error==='access_denied'?'⚠ לא ניתן אישור גישה. אפשר לנסות שוב.':'⚠ ההתחברות לגוגל לא הצליחה ('+r.error+').');return;}
+      if(!google.accounts.oauth2.hasGrantedAllScopes(r,G_SCOPE)){syncMsg('⚠ בחלון של גוגל צריך לסמן את התיבה של הגישה לדרייב. לחצי שוב על "סנכרון עכשיו" וסמני אותה.');return;}
+      gTok=r.access_token;gExp=Date.now()+(+r.expires_in||3600)*1000;setSyncState({consented:true});runSync();
+    },
+    error_callback:e=>{const t=e&&e.type;
+      syncMsg(t==='popup_closed'?'החלון של גוגל נסגר לפני האישור. אפשר ללחוץ שוב.':t==='popup_failed_to_open'?'⚠ הדפדפן חסם את החלון של גוגל. צריך לאפשר חלונות קופצים לאתר הזה.':'⚠ ההתחברות לגוגל לא הצליחה.');}
+  });
+  tokClient.requestAccessToken({prompt:syncState().consented?'':'consent'});
+}
+function syncOff(){
+  if(gTok&&window.google&&google.accounts&&google.accounts.oauth2){try{google.accounts.oauth2.revoke(gTok,()=>{});}catch(e){}}
+  gTok=null;gExp=0;setSyncState({consented:false});syncMsg('נותקת מגוגל במכשיר הזה. הטיולים עצמם נשארו כאן ובדרייב.');
+}
+class SyncErr extends Error{constructor(kind,status,detail){super(kind);this.kind=kind;this.status=status;this.detail=detail;}}
+async function gd(path,opt){
+  opt=opt||{};let r;
+  try{r=await fetch((opt.upload?'https://www.googleapis.com/upload/drive/v3/':'https://www.googleapis.com/drive/v3/')+path,
+    {method:opt.method||'GET',headers:Object.assign({Authorization:'Bearer '+gTok},opt.headers||{}),body:opt.body});}
+  catch(e){throw new SyncErr('net');}
+  if(r.status===401){gTok=null;throw new SyncErr('auth',401);}
+  if(!r.ok){let t='';try{t=await r.text();}catch(e){}throw new SyncErr('http',r.status,t);}
+  if(opt.blob)return r.blob();
+  if(opt.text)return r.text();
+  return r.status===204?null:r.json();
+}
+function multipart(meta,blob){
+  const b='shvil'+Math.random().toString(36).slice(2);
+  return {headers:{'Content-Type':'multipart/related; boundary='+b},
+    body:new Blob(['--'+b+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(meta)+'\r\n--'+b+'\r\nContent-Type: '+(blob.type||'application/octet-stream')+'\r\n\r\n',blob,'\r\n--'+b+'--'])};
+}
+async function gdList(kind){
+  const q=encodeURIComponent("appProperties has { key='shvil' and value='"+kind+"' } and trashed=false");
+  let out=[],tok='';
+  do{const r=await gd('files?q='+q+'&spaces=drive&pageSize=1000&fields='+encodeURIComponent('nextPageToken,files(id,name,modifiedTime,appProperties)')+(tok?'&pageToken='+encodeURIComponent(tok):''));
+    out=out.concat(r.files||[]);tok=r.nextPageToken||'';}while(tok);
+  return out;
+}
+async function gdFolder(){
+  const f=await gdList('folder');if(f.length)return f[0].id;
+  const r=await gd('files?fields=id',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name:'שביל – הטיולים שלי',mimeType:'application/vnd.google-apps.folder',appProperties:{shvil:'folder'}})});
+  return r.id;
+}
+function tripFileName(n){return 'שביל – '+String(n||'טיול').replace(/[\/\\]/g,'-')+'.json';}
+async function gdPutTrip(fileId,folder,tid,trip){
+  const meta={name:tripFileName(trip.meta&&trip.meta.name),mimeType:'application/json',appProperties:{shvil:'trip',tid}};
+  if(!fileId)meta.parents=[folder];
+  const body={app:'trip-app',kind:'sync',version:1,tid,savedAt:stamp(),device:deviceHe(),trip};
+  const mp=multipart(meta,new Blob([JSON.stringify(body)],{type:'application/json'}));
+  const r=await gd(fileId?('files/'+fileId+'?uploadType=multipart&fields=id'):('files?uploadType=multipart&fields=id'),{upload:true,method:fileId?'PATCH':'POST',headers:mp.headers,body:mp.body});
+  return r.id;
+}
+
+/* What travels between devices: everything except the per-device backup markers */
+function syncable(d){
+  return {meta:Object.assign({name:'',notes:''},d.meta||{}),
+    days:(d.days||[]).map(x=>{const c=Object.assign({},x);delete c.exported;return c;}),
+    events:d.events||[],stays:d.stays||[],alternatives:d.alternatives||[]};
+}
+function same(a,b){return JSON.stringify(a)===JSON.stringify(b);}
+const COLLS=[['days',x=>x.date],['events',x=>x.id],['stays',x=>x.id],['alternatives',x=>x.id]];
+/* Three-way merge, detail by detail. Returns the merged trip, the questions to ask, and counts. */
+function mergeTrips(L,R,B,tripName){
+  const out={meta:null,days:[],events:[],stays:[],alternatives:[]},conflicts=[];let got=0,sent=0;
+  const mergeItem=(l,r,b,coll,key)=>{
+    if(same(l,r))return l;
+    if(b){
+      if(same(l,b)){got++;return r;}          /* changed (or deleted) only on the other device */
+      if(same(r,b)){sent++;return l;}         /* changed (or deleted) only here */
+    }else{
+      if(!l){got++;return r;}                  /* first sync: something that exists on one side only is kept */
+      if(!r){sent++;return l;}
+    }
+    if(!l||!r){                                /* deleted on one side, edited on the other */
+      const c={trip:tripName,coll,key,l,r,fields:null};conflicts.push(c);return c;
+    }
+    const m=Object.assign({},l),fields=[];
+    const keys=new Set([...Object.keys(l),...Object.keys(r)]);keys.delete('updated');
+    let tookR=false,keptL=false;
+    keys.forEach(k=>{
+      const lv=l[k],rv=r[k],bv=b?b[k]:undefined;
+      if(same(lv,rv))return;
+      if(b&&same(lv,bv)){m[k]=rv;tookR=true;return;}
+      if(b&&same(rv,bv)){keptL=true;return;}
+      fields.push(k);
+    });
+    m.updated=[l.updated||'',r.updated||''].sort().pop();
+    if(tookR)got++; if(keptL)sent++;
+    if(!fields.length)return m;
+    const c={trip:tripName,coll,key,l,r,m,fields};conflicts.push(c);return c;
+  };
+  out.meta=mergeItem(L.meta,R.meta,B&&B.meta,'meta','meta');
+  for(const [coll,kf] of COLLS){
+    const map=new Map(),order=[];
+    const put=(side,arr)=>(arr||[]).forEach(x=>{const k=kf(x);if(!map.has(k)){map.set(k,{});order.push(k);}map.get(k)[side]=x;});
+    put('l',L[coll]);put('r',R[coll]);put('b',B&&B[coll]);
+    for(const k of order){const v=map.get(k);const res=mergeItem(v.l||null,v.r||null,v.b||null,coll,k);if(res)out[coll].push(res);}
+  }
+  return {trip:out,conflicts,got,sent};
+}
+function resolveConflict(c,choice){
+  if(!c.fields)return choice==='l'?c.l:c.r;
+  const m=Object.assign({},c.m);c.fields.forEach(k=>{const v=(choice==='l'?c.l:c.r)[k];if(v===undefined)delete m[k];else m[k]=v;});
+  return m;
+}
+function finishMerge(trip){
+  const t={meta:trip.meta&&trip.meta.coll?null:trip.meta};
+  COLLS.forEach(([coll])=>{t[coll]=trip[coll].map(x=>x&&x.coll?x.result:x).filter(Boolean);});
+  if(trip.meta&&trip.meta.coll)t.meta=trip.meta.result;
+  return t;
+}
+
+/* Questions inside the sheet, one at a time */
+function ask(title,body,opts){
+  return new Promise(res=>{
+    pendingAsk=res;
+    openSheet(`<h3>${title}</h3>${body}<div class="chooser">${opts.map((o,i)=>`<button class="b ${o.cls||''}" data-syncans="${i}" type="button"><span>${o.label}</span></button>`).join('')}</div>`);
+    panel.querySelectorAll('[data-syncans]').forEach(b=>b.onclick=()=>{pendingAsk=null;res(opts[+b.dataset.syncans].v);});
+  });
+}
+const FIELD_HE={title:'שם',time:'שעה',date:'תאריך',local:'שם מקומי',address:'כתובת',details:'פרטים',note:'מה באמת עשיתי',status:'מה קרה',
+  travelMode:'דרך ההגעה',travelMin:'זמן ההגעה',travelNote:'פרטי המסלול',photos:'תמונות',summary:'סיכום היום',sub:'שורת משנה',type:'סוג היום',city:'עיר',
+  name:'שם',notes:'הערות',phone:'טלפון',booking:'מספר הזמנה',cancelPolicy:'מדיניות ביטול',checkinDate:'תאריך כניסה',checkinTime:'שעת כניסה',
+  checkoutDate:'תאריך יציאה',checkoutTime:'שעת יציאה',seat:'מושב',baggage:'כבודה',flightNo:'מספר טיסה',arrTime:'שעת נחיתה',airline:'חברת תעופה',
+  lat:'מיקום על המפה',lng:'מיקום על המפה',used:'שימוש בחלופה',indoor:'בפנים או בחוץ',bgShort:'רקע',bgMore:'פרטים מעניינים',sources:'מקורות'};
+const COLL_HE={days:'יום',events:'תחנה',stays:'לינה',alternatives:'חלופה',meta:'פרטי הטיול'};
+function itemName(c){
+  const x=c.l||c.r||{};
+  if(c.coll==='days')return dayLabel(c.key)+(x.title?' · '+x.title:'');
+  if(c.coll==='events')return (isFlight(x)?stopTitle(x):x.title||'')+(x.date?' · '+dayLabel(x.date):'');
+  if(c.coll==='meta')return x.name||'';
+  return x.name||x.title||'';
+}
+function showVal(k,v){
+  if(v===undefined||v===null||v==='')return '<span class="locline">(ריק)</span>';
+  if(k==='status')return {planned:'מתוכנן',done:'היה',cancelled:'בוטל',changed:'השתנה'}[v]||esc(v);
+  if(k==='photos')return Array.isArray(v)?v.length+' תמונות':'';
+  if(k==='travelMode')return (MODE[v]||{}).name||esc(v);
+  if(k==='type')return v==='nature'?'יום טבע':'יום עיר';
+  const s=typeof v==='string'?v:JSON.stringify(v);
+  return esc(s.length>220?s.slice(0,220)+'…':s);
+}
+async function askConflict(c,i,n,otherDev){
+  const head=`<div class="m">${esc(c.trip)} · ${COLL_HE[c.coll]||''}: ${esc(itemName(c))}</div><p class="locline">שאלה ${i} מתוך ${n}</p>`;
+  if(!c.fields){
+    const gone=c.l?'במכשיר השני':'במכשיר הזה';
+    return ask('נמחק במקום אחד, נערך במקום אחר',head+`<p>ה${COLL_HE[c.coll]||'פריט'} נמחק ${gone}, ובמקביל נערך במקום האחר.</p>`,
+      [{label:'להשאיר אותו',v:c.l?'l':'r',cls:'p'},{label:'למחוק אותו',v:c.l?'r':'l'}]);
+  }
+  const rows=k=>`<div class="cmp"><div class="k">${esc(FIELD_HE[k]||k)}</div>
+    <div class="v"><b>כאן (${esc(deviceHe())}):</b> ${showVal(k,c.l[k])}</div>
+    <div class="v"><b>בדרייב${otherDev?' ('+esc(otherDev)+')':''}:</b> ${showVal(k,c.r[k])}</div></div>`;
+  const uniq=[...new Set(c.fields.map(k=>k==='lng'?'lat':k))];
+  return ask('אותו פרט שונה בשני מקומות',head+uniq.map(rows).join('')+`<p class="locline">שאר השינויים בפריט הזה כבר אוחדו לבד.</p>`,
+    [{label:'לשמור את מה שכאן ('+deviceHe()+')',v:'l',cls:'p'},{label:'לשמור את מה שבדרייב',v:'r'}]);
+}
+function errText(e){
+  if(e&&e.kind==='net')return '⚠ החיבור לאינטרנט נפל באמצע. כלום לא אבד. אפשר ללחוץ שוב.';
+  if(e&&e.kind==='auth')return '⚠ פג תוקף ההתחברות לגוגל. לחצי שוב על "סנכרון עכשיו".';
+  if(e&&e.kind==='http'&&e.status===403)return '⚠ גוגל סירבה לגישה (403). אם הגדרות הפרויקט נעשו ממש עכשיו, נסי שוב בעוד כמה דקות.';
+  if(e&&e.kind==='http')return '⚠ שגיאה מהדרייב ('+e.status+'). כלום לא אבד. אפשר לנסות שוב.';
+  return '⚠ משהו השתבש בסנכרון. כלום לא אבד. אפשר לנסות שוב.';
+}
+function readTrip(id){try{const s=localStorage.getItem(tripKey(id));return s?JSON.parse(s):null;}catch(e){return null;}}
+function readBase(id){try{const s=localStorage.getItem(baseKey(id));return s?JSON.parse(s):null;}catch(e){return null;}}
+function writeTripLocal(id,trip,keepFrom){
+  const ex=new Map(((keepFrom&&keepFrom.days)||[]).map(d=>[d.date,d.exported||'']));
+  const full=Object.assign({},trip,{days:trip.days.map(d=>Object.assign({},d,{exported:ex.get(d.date)||''}))});
+  const keep=data;data=full;normalize();const fixed=data;data=keep;
+  localStorage.setItem(tripKey(id),JSON.stringify(fixed));
+  localStorage.setItem(baseKey(id),JSON.stringify(syncable(fixed)));
+  const en=idxEntry(id);if(en)Object.assign(en,{name:fixed.meta.name},rangeOf(fixed.days));
+  return fixed;
+}
+function syncProgress(t){openSheet(`<h3>סנכרון</h3><p id="syncStep">${esc(t)}</p><div class="saved" id="syncMsg"></div>`);}
+function step(t){const s=document.getElementById('syncStep');if(s)s.textContent=t;else syncProgress(t);}
+
+async function runSync(){
+  if(syncing)return;syncing=true;
+  saveTyping();save();
+  const report={trips:0,got:0,sent:0,newHere:0,newThere:0,photosUp:0,photosDown:0,removed:0,photoFail:0};
+  try{
+    syncProgress('בודקת מה יש בדרייב…');
+    const folder=await gdFolder();
+    const remote=await gdList('trip');
+    const byFile=new Map(remote.map(f=>[f.id,f]));
+    const linked=new Set(idx.trips.map(t=>t.driveId).filter(Boolean));
+    /* Trips deleted on this device: move their Drive file to the Drive trash (it can be restored from there) */
+    for(const g of (idx.gone||[])){if(byFile.has(g.driveId)){await gd('files/'+g.driveId,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({trashed:true})});byFile.delete(g.driveId);}}
+    idx.gone=[];saveIndex();
+    /* Trips whose Drive file disappeared */
+    for(const en of idx.trips.slice()){
+      if(!en.driveId||en.noSync||byFile.has(en.driveId))continue;
+      const opts=[{label:'להשאיר כאן ולהעלות שוב לדרייב',v:'keep',cls:'p'}];
+      if(idx.trips.length>1)opts.push({label:'למחוק אותו גם מכאן',v:'del',cls:'r'});
+      const a=await ask('טיול שנמחק מהדרייב',`<p>הטיול <b>${esc(en.name)}</b> כבר לא נמצא בדרייב. כנראה שנמחק במכשיר השני.</p>`,opts);
+      if(a==='cancel')throw new SyncErr('cancel');
+      if(a==='del'){try{localStorage.removeItem(tripKey(en.id));localStorage.removeItem(baseKey(en.id));}catch(e){}idx.trips=idx.trips.filter(x=>x.id!==en.id);report.removed++;}
+      else{delete en.driveId;try{localStorage.removeItem(baseKey(en.id));}catch(e){}}
+      saveIndex();
+    }
+    /* Trips on Drive that this device does not know yet */
+    const ignored=new Set(idx.ignoredDrive||[]);
+    idx.trips.forEach(t=>{if(t.noSync===undefined&&!t.driveId&&/\(דוגמה\)/.test(t.name||''))t.noSync=true;});
+    const unlinkedRemote=remote.filter(f=>byFile.has(f.id)&&!ignored.has(f.id)&&!idx.trips.some(t=>t.driveId===f.id));
+    const pairs=[];
+    for(const en of idx.trips){if(en.driveId&&!en.noSync&&byFile.has(en.driveId))pairs.push({en,file:byFile.get(en.driveId)});}
+    for(const en of idx.trips.filter(t=>!t.driveId&&!t.noSync)){
+      const same1=unlinkedRemote.find(f=>(f.appProperties||{}).tid===en.id)||unlinkedRemote.find(f=>f.name===tripFileName(en.name));
+      if(same1){
+        const a=await ask('אותו טיול?',`<p>בדרייב כבר יש טיול בשם <b>${esc(en.name)}</b>, ויש טיול באותו שם גם כאן.</p><p class="locline">אם זה אותו טיול (למשל, נטען מאותו קובץ בשני המכשירים), כדאי לאחד. אם לא, הם יישמרו כשני טיולים נפרדים.</p>`,
+          [{label:'זה אותו טיול, לאחד',v:'merge',cls:'p'},{label:'אלה שני טיולים שונים',v:'apart'},{label:'לא לסנכרן את הטיול הזה',v:'skip'}]);
+        if(a==='cancel')throw new SyncErr('cancel');
+        if(a==='merge'){en.driveId=same1.id;pairs.push({en,file:same1,first:true});unlinkedRemote.splice(unlinkedRemote.indexOf(same1),1);continue;}
+        if(a==='skip'){en.noSync=true;idx.ignoredDrive=(idx.ignoredDrive||[]).concat(same1.id);unlinkedRemote.splice(unlinkedRemote.indexOf(same1),1);saveIndex();continue;}
+      }
+      pairs.push({en,file:null});
+    }
+    /* Merge each trip */
+    for(const p of pairs){
+      const local=readTrip(p.en.id);if(!local)continue;
+      const L=syncable(local);
+      if(!p.file){
+        step('מעלה לדרייב: '+p.en.name);
+        p.en.driveId=await gdPutTrip(null,folder,p.en.id,L);saveIndex();
+        writeTripLocal(p.en.id,L,local);report.trips++;report.newThere++;continue;
+      }
+      step('מאחדת: '+p.en.name);
+      const body=JSON.parse(await gd('files/'+p.file.id+'?alt=media',{text:true}));
+      const R=syncable(body.trip||{});
+      const B=p.first?null:readBase(p.en.id);
+      const res=mergeTrips(L,R,B,p.en.name);
+      let n=0;
+      for(const c of res.conflicts){
+        n++;const a=await askConflict(c,n,res.conflicts.length,body.device);
+        if(a==='cancel')throw new SyncErr('cancel');
+        c.result=resolveConflict(c,a);
+      }
+      const merged=finishMerge(res.trip);
+      step('שומרת: '+p.en.name);
+      if(!same(merged,R))await gdPutTrip(p.file.id,folder,(p.file.appProperties||{}).tid||p.en.id,merged);
+      writeTripLocal(p.en.id,merged,local);saveIndex();
+      report.trips++;report.got+=res.got;report.sent+=res.sent;
+      if(p.en.id===activeId){data=null;load();}
+    }
+    /* New trips from Drive */
+    for(const f of unlinkedRemote){
+      step('מורידה מהדרייב: '+f.name.replace(/^שביל – |\.json$/g,''));
+      const body=JSON.parse(await gd('files/'+f.id+'?alt=media',{text:true}));
+      const tid=(body.tid&&!idxEntry(body.tid))?body.tid:('t'+uid());
+      const trip=syncable(body.trip||{});
+      idx.trips.push({id:tid,name:trip.meta.name||'טיול',driveId:f.id,first:'',last:'',count:0});
+      writeTripLocal(tid,trip,null);saveIndex();report.trips++;report.newHere++;
+    }
+    /* Photos: upload what is only here, download what is only on Drive */
+    step('בודקת תמונות…');
+    const rph=await gdList('photo');const onDrive=new Map(rph.map(f=>[(f.appProperties||{}).pid,f.id]));
+    const wanted=new Map();
+    for(const en of idx.trips){if(en.noSync)continue;const t=readTrip(en.id);if(!t)continue;
+      (t.events||[]).forEach(e=>(e.photos||[]).forEach(ph=>wanted.set(ph.id,ph.name||'')));}
+    const list=[...wanted.keys()];let k=0;
+    for(const pid of list){
+      k++;
+      const url=await photoGet(pid);
+      try{
+        if(url&&!onDrive.has(pid)){
+          step('מעלה תמונה '+k+' מתוך '+list.length);
+          const blob=await (await fetch(url)).blob();
+          const mp=multipart({name:'תמונה '+pid+'.jpg',parents:[folder],appProperties:{shvil:'photo',pid}},blob);
+          await gd('files?uploadType=multipart&fields=id',{upload:true,method:'POST',headers:mp.headers,body:mp.body});report.photosUp++;
+        }else if(!url&&onDrive.has(pid)){
+          step('מורידה תמונה '+k+' מתוך '+list.length);
+          const blob=await gd('files/'+onDrive.get(pid)+'?alt=media',{blob:true});
+          const du=await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.onerror=rej;fr.readAsDataURL(blob);});
+          await photoPut(pid,du);report.photosDown++;
+        }
+      }catch(e){if(e&&e.kind&&e.kind!=='http')throw e;report.photoFail++;}
+    }
+    setSyncState({lastSync:stamp()});
+    if(!idxEntry(activeId)){activeId=null;}
+    data=null;load();save();render(true);
+    const lines=[];
+    if(report.trips)lines.push(report.trips===1?'סונכרן טיול אחד.':'סונכרנו '+report.trips+' טיולים.');
+    if(report.got)lines.push(report.got===1?'התקבל שינוי אחד מהמכשיר השני.':'התקבלו מהמכשיר השני '+report.got+' שינויים.');
+    if(report.sent)lines.push(report.sent===1?'נשלח לדרייב שינוי אחד מכאן.':'נשלחו לדרייב '+report.sent+' שינויים מכאן.');
+    if(!report.got&&!report.sent&&!report.newHere&&!report.newThere)lines.push('לא היו שינויים חדשים.');
+    if(report.newHere)lines.push('טיולים חדשים שהגיעו מהדרייב: '+report.newHere+'.');
+    if(report.newThere)lines.push('טיולים שהועלו לדרייב בפעם הראשונה: '+report.newThere+'.');
+    if(report.photosUp||report.photosDown)lines.push('תמונות: '+report.photosUp+' הועלו, '+report.photosDown+' הורדו.');
+    if(report.photoFail)lines.push('⚠ '+report.photoFail+' תמונות לא עברו. הן יעברו בסנכרון הבא.');
+    if(report.removed)lines.push('טיולים שנמחקו מכאן: '+report.removed+'.');
+    openSheet(`<h3>הסנכרון הסתיים ✓</h3>${lines.map(l=>`<p>${esc(l)}</p>`).join('')}<div class="btns" style="margin-top:1rem"><button class="b p" data-act="close" type="button">סגירה</button></div>`);
+  }catch(e){
+    if(e&&e.kind==='cancel'){closeSheet();}
+    else openSheet(`<h3>הסנכרון לא הושלם</h3><p>${esc(errText(e))}</p><p class="locline">שינויים שכבר נשמרו נשארים. מה שלא הסתיים ימשיך בסנכרון הבא.</p>
+      <div class="btns" style="margin-top:1rem"><button class="b p" data-act="sync" type="button">לנסות שוב</button><button class="b" data-act="close" type="button">סגירה</button></div>`);
+    try{data=null;load();render(true);}catch(x){}
+  }finally{syncing=false;pendingAsk=null;}
+}
+
 /* Export */
 function fileStamp(){const n=new Date(),z=v=>String(v).padStart(2,'0');return iso(n)+'-'+z(n.getHours())+z(n.getMinutes());}
 async function dayPayload(day){
@@ -1265,6 +1610,8 @@ document.addEventListener('click',x=>{
   else if(a==='edit')openEdit(id);
   else if(a==='add')openAddChooser(ds);
   else if(a==='pickContact')pickContact(t);
+  else if(a==='sync')startSync();
+  else if(a==='syncOff')syncOff();
   else if(a==='trips')openTrips();
   else if(a==='openTrip'){if(t.dataset.tid===activeId)closeSheet();else switchTrip(t.dataset.tid);}
   else if(a==='newTrip')openNewTrip();
@@ -1272,9 +1619,10 @@ document.addEventListener('click',x=>{
   else if(a==='editTrip')openTripEdit();
   else if(a==='size'){setSize(t.dataset.size);openMenu();}
   else if(a==='delTrip'){
-    if(t.dataset.sure){const gone=activeId;try{localStorage.removeItem(tripKey(gone));}catch(e){}
+    if(t.dataset.sure){const gone=activeId;const ge=idxEntry(gone);if(ge&&ge.driveId&&!ge.noSync){idx.gone=(idx.gone||[]).concat({driveId:ge.driveId,name:ge.name});}
+      try{localStorage.removeItem(tripKey(gone));localStorage.removeItem(baseKey(gone));}catch(e){}
       idx.trips=idx.trips.filter(x=>x.id!==gone);activeId=null;data=null;load();saveIndex();closeSheet();render();scrollToFocus();}
-    else{t.dataset.sure='1';t.textContent='בטוחה? הטיול יימחק מהמכשיר הזה';}
+    else{t.dataset.sure='1';const ge=idxEntry(activeId);t.textContent=(ge&&ge.driveId&&!ge.noSync)?'בטוחה? הטיול יימחק מהמכשיר הזה, ובסנכרון הבא גם מהדרייב':'בטוחה? הטיול יימחק מהמכשיר הזה';}
   }
   else if(a==='editDay')openDayEdit(ds);
   else if(a==='newDay')openDayNew(t.dataset.pos);
