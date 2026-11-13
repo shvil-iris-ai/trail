@@ -558,6 +558,7 @@ function render(keepScroll){
       if(st.checkinDate===day.date)items.push({t:st.checkinTime||'15:00',stay:st,kind:'in'});
     });
     items.sort((a,b)=>a.t.localeCompare(b.t)||((a.stay?(a.kind==='out'?-1:1):0)-(b.stay?(b.kind==='out'?-1:1):0)));
+    if(i===0)html+=homeRow('start',day);
     items.forEach(it=>{
       if(it.stay){
         html+=`<div class="row"><div class="mkcol"></div><button class="vstop" data-act="stay" data-sid="${it.stay.id}" type="button">${BED}<span><span class="t">${it.kind==='in'?'צ׳ק-אין':'צ׳ק-אאוט עד'} <span dir="ltr">${esc(it.t)}</span></span><br><span class="m">${esc(it.stay.name)}</span></span></button></div>`;
@@ -586,6 +587,7 @@ function render(keepScroll){
       }
       if(e.status!=='cancelled')prev=e;
     });
+    if(i===days.length-1)html+=homeRow('end',day);
     if(ended){
       html+=`<div class="row" id="endedRow"><div class="mkcol"><div class="mk done">${CHECK}</div></div>
         <section class="ended"><div class="t">היום הסתיים</div>
@@ -620,7 +622,7 @@ function render(keepScroll){
     html+='</div></section>';
   });
   html+=`<div class="testline">${storageOK?'שמירה במכשיר פעילה ✓'+(lastSaved?' · נשמר '+lastSaved:''):'⚠ השמירה במכשיר לא זמינה בדפדפן הזה'} · ${esc(browserName())} · ${deviceHe()}
-    <br>נבנתה על ידי איריס, בעזרת Claude · גרסה 13<br><button class="reset" data-act="reset" type="button">איפוס לנתוני הדוגמה (לבדיקה בלבד)</button></div>`;
+    <br>נבנתה על ידי איריס, בעזרת Claude · גרסה 15</div>`;
   document.getElementById('main').innerHTML=html;
   hydratePhotos(document.getElementById('main'));
   if(keepScroll)window.scrollTo(0,y);
@@ -673,7 +675,8 @@ function openDetails(id){
   openSheet(`<h3>${isFlight(e)?'<span class="ico" style="display:inline-flex;width:1.3rem;margin-inline-end:.3rem">'+PLANE+'</span>':''}${esc(stopTitle(e))}</h3>
     <div class="m">${isFlight(e)?'':esc(e.local)+' · '}<span dir="ltr">${esc(e.time)}</span> · ${esc(dayLabel(e.date))}</div>${fl}
     ${e.address?`<p class="m">מיקום: <span dir="ltr">${esc(e.address)}</span></p>`:''}
-    ${e.phone?`<p class="m">טלפון: <span dir="ltr" style="user-select:all">${esc(e.phone)}</span></p>`:''}
+    ${e.phone?`<p class="m">טלפון: <a dir="ltr" href="tel:${esc(e.phone.replace(/[^\d+*#]/g,''))}">${esc(e.phone)}</a></p>`:''}
+    ${e.email?`<p class="m">מייל: <a dir="ltr" href="mailto:${esc(e.email)}">${esc(e.email)}</a></p>`:''}
     ${e.details?`<p>${esc(e.details)}</p>`:''}
     <div class="btns">${st('done')}${st('changed')}${st('cancelled')}</div>
     ${e.cancelPolicy?`<p class="more" style="margin-top:.6rem"><b>מדיניות ביטול:</b> ${esc(e.cancelPolicy)}</p>`:''}
@@ -796,9 +799,10 @@ function openEdit(id,date){
         <label class="f">תאריך<input type="date" name="date" id="f_date" value="${esc(e.date)}" required></label>
         <label class="f">שעה<input type="time" name="time" id="f_time" value="${esc(e.time)}" required></label>
       </div>
-      ${contactBtn('f_title','f_address','f_phone')}
+      ${contactBtn('f_title','f_address','f_phone','f_email','f_details')}
       <label class="f">כתובת (מוצגת לנהג ומשמשת לחישוב המסלול)<input name="address" id="f_address" value="${esc(e.address)}" dir="ltr"></label>
-      <label class="f">טלפון<input name="phone" id="f_phone" value="${esc(e.phone||'')}" dir="ltr" inputmode="tel"></label>
+      <div class="pair"><label class="f">טלפון<input name="phone" id="f_phone" value="${esc(e.phone||'')}" dir="ltr" inputmode="tel"></label>
+        <label class="f">מייל<input type="email" name="email" id="f_email" value="${esc(e.email||'')}" dir="ltr"></label></div>
       <div class="pair">
         <label class="f">הגעה מהתחנה הקודמת<select name="travelMode" id="f_travelMode">${opt('walk')}${opt('transit')}${opt('car')}</select></label>
         <label class="f">זמן נסיעה (דקות)<input type="number" min="0" max="600" name="travelMin" id="f_travelMin" value="${esc(e.travelMin)}" inputmode="numeric"></label>
@@ -847,6 +851,9 @@ function openMenu(){
   openSheet(`<h3>תפריט</h3>
     <div class="chooser"><button class="b p" data-act="trips" type="button">${BED.replace('#6B3FA0','#FFFFFF').replace('#6B3FA0','#FFFFFF')}<span>הטיולים שלי</span></button></div>
     ${RO?'':'<div class="chooser" style="margin-top:.5rem"><button class="b" data-act="share" type="button"><span>שיתוף הטיול הזה לצפייה'+(data.meta.share&&data.meta.share.fileId?' · משותף ✓':'')+'</span></button></div>'}
+    <h4>הכתובת שלי</h4><p class="locline">נקודת היציאה והחזרה בכל טיול. נשמרת במכשיר הזה בלבד.</p>
+    <div class="pair"><input id="homeAddr" value="${esc(myHome())}" placeholder="רחוב, מספר, עיר" dir="auto"><button class="b" data-act="saveHome" type="button" style="flex:none">שמירה</button></div>
+    <div class="saved" id="homeMsg"></div>
     <h4>גודל הטקסט</h4><div class="sizes">${sz('big','רגיל')}${sz('large','גדול')}${sz('huge','גדול מאוד')}</div>
     <h4>סנכרון בין המכשירים</h4>
     <p class="locline">${ss.lastSync?'סנכרון אחרון במכשיר הזה: '+esc(fmtWhen(ss.lastSync)):'עוד לא היה סנכרון במכשיר הזה.'} הטיולים נשמרים בתיקייה "שביל – הטיולים שלי" בדרייב שלך.</p>
@@ -867,6 +874,7 @@ function openTrips(){
   openSheet(`<h3>הטיולים שלי</h3>${sec('now','עכשיו')}${sec('soon','בקרוב')}${sec('past','היו')}
     <div class="btns" style="margin-top:1rem"><button class="b g" data-act="newTrip" type="button">+ טיול חדש</button>
     <button class="b" data-act="importTrip" type="button">טעינת טיול מקובץ</button></div>
+    ${RO?'':'<div class="btns"><button class="b" data-act="updateTrip" type="button">עדכון הטיול הפתוח מקובץ</button></div><p class="locline">מוסיף רקע ופרטים לטיול הפתוח, בלי לגעת בהערות, בסימונים ובתמונות שלך.</p>'}
     <div class="saved" id="importMsg"></div>`);
 }
 function openNewTrip(){
@@ -901,7 +909,7 @@ function openTripEdit(){
   const many=idx.trips.length>1;
   if(RO){openSheet(`<h3>${esc(data.meta.name)}</h3><p>טיול לצפייה${data.meta.view.owner?' ששיתפה '+esc(data.meta.view.owner):''}. אפשר לצפות בו בלבד.</p>
     ${data.meta.notes?`<p>${esc(data.meta.notes)}</p>`:''}
-    <div class="btns" style="margin-top:1rem"><button class="b r" type="button" data-act="delTrip">הסרת הטיול מהמכשיר הזה</button></div>`);return;}
+    <div class="btns" style="margin-top:1rem"><button class="b r" type="button" data-act="delTrip">הסרת הטיול מהמכשיר הזה</button></div><div class="saved" id="syncMsg"></div>`);return;}
   openSheet(`<h3>פרטי הטיול</h3>
     <form id="teForm">
       <label class="f">שם הטיול<input name="name" id="te_name" value="${esc(data.meta.name)}" required></label>
@@ -910,6 +918,7 @@ function openTripEdit(){
       <label class="f chk"><input type="checkbox" name="sync" ${idxEntry(activeId).noSync?'':'checked'}> לסנכרן את הטיול הזה בין המכשירים</label>
       <div class="btns" style="margin-top:1rem"><button class="b p" type="submit">שמירה</button>
       ${many?'<button class="b r" type="button" data-act="delTrip">מחיקת הטיול</button>':''}</div>
+      <div class="saved" id="syncMsg"></div>
     </form>`);
   document.getElementById('teForm').onsubmit=x=>{
     x.preventDefault();const f=Object.fromEntries(new FormData(x.target).entries());
@@ -976,34 +985,6 @@ function openDayNew(pos){
   };
 }
 
-/* Contacts: copy name, address and phone from the phone's contact list (Chrome on Android only) */
-function contactsSupported(){return false;} /* set aside: on Samsung + Chrome the picker returns no contact */
-function contactBtn(nameId,addrId,phoneId){
-  if(!contactsSupported())return '';
-  return `<div class="btns"><button class="b" type="button" data-act="pickContact" data-n="${nameId}" data-a="${addrId}" data-p="${phoneId}">בחירה מאנשי הקשר</button></div><div class="saved" id="contactMsg"></div>`;
-}
-function addrText(a){
-  if(!a)return '';
-  return [(a.addressLine||[]).join(' '),a.city,a.region,a.postalCode,a.country].filter(Boolean).join(', ');
-}
-/* The list of supported contact fields is read once at start, so the picker opens directly from the tap */
-let contactProps=['name','tel'];
-if(contactsSupported()){try{navigator.contacts.getProperties().then(a=>{contactProps=['name','tel','address'].filter(p=>a.includes(p));}).catch(()=>{});}catch(e){}}
-async function pickContact(t){
-  const msg=document.getElementById('contactMsg');
-  const say=x=>{const m=document.getElementById('contactMsg');if(m)m.textContent=x;};
-  say('פותחת את אנשי הקשר…');
-  let res;
-  try{res=await navigator.contacts.select(contactProps,{multiple:true});}
-  catch(err){say('⚠ לא הצלחתי לפתוח את אנשי הקשר ('+(err&&err.name||'שגיאה')+').');return;}
-  if(!res||!res.length){say('לא נבחר איש קשר. אחרי שבוחרים שם ברשימה, צריך ללחוץ על הכפתור בתחתית הרשימה.');return;}
-  const c=res[0], name=(c.name||[])[0]||'', tel=(c.tel||[])[0]||'', ad=addrText((c.address||[])[0]);
-  const fill=(id,v,onlyEmpty)=>{const el=document.getElementById(id);if(!el||!v)return false;if(onlyEmpty&&el.value)return true;el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}));return true;};
-  const okN=fill(t.dataset.n,name,true), okP=fill(t.dataset.p,tel), okA=fill(t.dataset.a,ad);
-  say('התקבל מאנשי הקשר: '+(name||'בלי שם')+' · טלפון: '+(tel||'אין')+' · כתובת: '+(ad||'אין'+(contactProps.includes('address')?'':' (הטלפון לא מאפשר משיכת כתובת)'))
-      +((tel&&!okP)||(ad&&!okA)?' · ⚠ לא הצלחתי למלא את השדות':' · עכשיו ללחוץ "שמירה" בתחתית הטופס'));
-}
-
 /* Add: choose what kind of item */
 function openAddChooser(ds){
   openSheet(`<h3>מה להוסיף?</h3><div class="m">${esc(dayLabel(ds))}</div>
@@ -1063,7 +1044,8 @@ function openStay(sid){
     <dl class="finfo">
       ${st.local?`<dt>שם מקומי</dt><dd dir="ltr" style="text-align:right">${esc(st.local)}</dd>`:''}
       ${st.address?`<dt>כתובת</dt><dd dir="ltr" style="text-align:right">${esc(st.address)}</dd>`:''}
-      ${st.phone?`<dt>טלפון</dt><dd dir="ltr" style="text-align:right;user-select:all">${esc(st.phone)}</dd>`:''}
+      ${st.phone?`<dt>טלפון</dt><dd dir="ltr" style="text-align:right"><a href="tel:${esc(st.phone.replace(/[^\d+*#]/g,''))}">${esc(st.phone)}</a></dd>`:''}
+      ${st.email?`<dt>מייל</dt><dd dir="ltr" style="text-align:right"><a href="mailto:${esc(st.email)}">${esc(st.email)}</a></dd>`:''}
       <dt>צ׳ק-אין</dt><dd>${esc(dayLabel(st.checkinDate))} · <span dir="ltr">${esc(st.checkinTime||'')}</span></dd>
       <dt>צ׳ק-אאוט</dt><dd>${esc(dayLabel(st.checkoutDate))} · עד <span dir="ltr">${esc(st.checkoutTime||'')}</span></dd>
       ${st.booking?`<dt>קוד הזמנה</dt><dd dir="ltr" style="text-align:right">${esc(st.booking)}</dd>`:''}
@@ -1085,9 +1067,10 @@ function openStayEdit(sid,date){
     <form id="stForm">
       <label class="f">שם המלון<input name="name" id="st_name" value="${esc(st.name)}" required></label>
       <label class="f">השם המקומי<input name="local" id="st_local" value="${esc(st.local)}" dir="ltr"></label>
-      ${contactBtn('st_name','st_address','st_phone')}
+      ${contactBtn('st_name','st_address','st_phone','st_email','st_notes')}
       <label class="f">כתובת (מוצגת לנהג)<input name="address" id="st_address" value="${esc(st.address)}" dir="ltr"></label>
-      <label class="f">טלפון<input name="phone" id="st_phone" value="${esc(st.phone)}" dir="ltr" inputmode="tel"></label>
+      <div class="pair"><label class="f">טלפון<input name="phone" id="st_phone" value="${esc(st.phone)}" dir="ltr" inputmode="tel"></label>
+        <label class="f">מייל<input type="email" name="email" id="st_email" value="${esc(st.email||'')}" dir="ltr"></label></div>
       <div class="pair"><label class="f">צ׳ק-אין<input type="date" name="checkinDate" id="st_inD" value="${esc(st.checkinDate)}" required></label>
         <label class="f">שעה<input type="time" name="checkinTime" id="st_inT" value="${esc(st.checkinTime)}"></label></div>
       <div class="pair"><label class="f">צ׳ק-אאוט<input type="date" name="checkoutDate" id="st_outD" value="${esc(st.checkoutDate)}" required></label>
@@ -1572,7 +1555,7 @@ async function runSync(opts){
 const G_VIEW_KEY='AIzaSyClEP36c2wGvYyDitPAxPVjWsPKLogLGvg';
 const VIEW_ID=(()=>{try{return new URLSearchParams(location.search).get('view');}catch(e){return null;}})();
 const SHARE_OPTS=[['details','פרטים (הטקסט החופשי בכל תחנה, הערות על הלינה והטיול)',true],['booking','מספרי הזמנה',false],['seat','מושב וכבודה בטיסות',false],
-  ['cancel','מדיניות ביטול',false],['phone','טלפונים',false],['note','"מה באמת עשיתי"',false],['summary','סיכומי הימים',false],['photos','תמונות',false]];
+  ['cancel','מדיניות ביטול',false],['phone','טלפונים ומיילים',false],['note','"מה באמת עשיתי"',false],['summary','סיכומי הימים',false],['photos','תמונות',false]];
 function defaultShareOpts(){const o={};SHARE_OPTS.forEach(([k,,v])=>o[k]=v);return o;}
 function viewLink(fid){return location.origin+location.pathname+'?view='+encodeURIComponent(fid);}
 function shareText(name,fid){return 'שיתפתי איתך לצפייה את הטיול "'+name+'". הקישור נפתח בטלפון או במחשב, בלי הרשמה ובלי התקנה:\n'+viewLink(fid);}
@@ -1585,11 +1568,12 @@ function filterView(trip,o,photoMap){
     if(!o.booking)delete e.booking;
     if(!o.seat){delete e.seat;delete e.baggage;}
     if(!o.cancel)delete e.cancelPolicy;
-    if(!o.phone)delete e.phone;
+    if(!o.phone){delete e.phone;delete e.email;}
     if(!o.note)e.note='';
     e.photos=o.photos?(e.photos||[]).filter(p=>photoMap&&photoMap.has(p.id)).map(p=>Object.assign({},p,{driveId:photoMap.get(p.id)})):[];
   });
-  t.stays.forEach(s=>{if(!o.booking)delete s.booking;if(!o.phone)delete s.phone;if(!o.cancel)delete s.cancelPolicy;if(!o.details)s.notes='';});
+  ['start','end'].forEach(k=>{if(t.meta[k])t.meta[k]=Object.assign({},t.meta[k],{address:''});});
+  t.stays.forEach(s=>{if(!o.booking)delete s.booking;if(!o.phone){delete s.phone;delete s.email;}if(!o.cancel)delete s.cancelPolicy;if(!o.details)s.notes='';});
   t.days.forEach(d=>{if(!o.summary)d.summary='';});
   t.alternatives.forEach(a=>{if(!o.cancel)delete a.cancelPolicy;if(!o.details)a.details='';});
   return t;
@@ -1773,7 +1757,211 @@ function travelViewSheet(id){
     <p>${esc(md.name)}${e.travelMin?' · '+esc(e.travelMin)+' דק׳':''}</p>${e.travelNote?`<p style="white-space:pre-wrap">${esc(e.travelNote)}</p>`:''}`);
 }
 const RO_BLOCK=new Set(['newDay','editDay','done','summary','exportDay','exportAll','add','status','swap','undoSwap','pickAlt','doSwap','addPhoto','delPhoto',
-  'myLoc','edit','editFlight','stayEdit','stayDel','stayLoc','travel','reset','addStop','addFlight','addStay','del','delDay','share','sharePublish','shareStop']);
+  'myLoc','edit','editFlight','stayEdit','stayDel','stayLoc','travel','reset','addStop','addFlight','addStay','del','delDay','share','sharePublish','shareStop','updateTrip','pasteContact','fillContact']);
+
+/* ===== Leaving home and coming back =====
+   The first day gets a travel line from home (or another starting point) to the first stop,
+   and the last day gets one from the last stop back home. "My address" is kept on each device. */
+const HOME_KEY='trip-app-home';
+function myHome(){try{return localStorage.getItem(HOME_KEY)||'';}catch(e){return '';}}
+function plusMin(hm,min){const[h,m]=hm.split(':').map(Number);let t=h*60+m+Number(min||0);const next=t>=1440;t=t%1440;return {hm:String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0'),next};}
+function homeInfo(which){
+  const days=sortedDays();if(!days.length)return null;
+  const day=which==='start'?days[0]:days[days.length-1];
+  const act=eventsOf(day.date).filter(e=>e.status!=='cancelled');if(!act.length)return null;
+  const e=which==='start'?act[0]:act[act.length-1];
+  const s=Object.assign({label:'הבית',address:'',mode:'car',min:'',note:'',after:'45',departTime:''},data.meta[which]||{});
+  if(!s.address&&!RO)s.address=myHome();
+  return {day,e,s};
+}
+function homeRow(which,day){
+  const h=homeInfo(which);if(!h||h.day.date!==day.date)return '';
+  const {e,s}=h,md=MODE[s.mode]||MODE.car;
+  if(RO&&!s.min)return '';
+  const from=which==='start'?'מ'+(s.label==='הבית'?'הבית':s.label):(s.label==='הבית'?'הביתה':'אל '+s.label);
+  const link=s.address?(which==='start'
+    ?'https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(s.address)+'&destination='+encodeURIComponent(pt(e,'dest'))+'&travelmode='+md.gm
+    :'https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(pt(e,'origin'))+'&destination='+encodeURIComponent(s.address)+'&travelmode='+md.gm):'';
+  const btn=`<button class="gm" style="background:none;border:0;padding:0;font:inherit" data-act="homeTravel" data-which="${which}" type="button">${RO?(s.note?'פרטי המסלול':''):(s.min?'פרטים ותיקון':'הוספת זמן')}</button>`;
+  const gm=link?`<a class="gm" href="${link}" target="_blank" rel="noopener">בדיקה ב-Google Maps</a>`:'';
+  let mid='';
+  if(!s.min)mid=`<span>${esc(from)} · זמן הנסיעה לא הוזן${s.address?'':' · עוד לא הוזנה כתובת'}</span>`;
+  else if(which==='start'){
+    const target=isFlight(e)?minusMin(e.time,e.airportBuffer||180):e.time;
+    mid=`<span>${esc(from)} · ${md.name} · ${esc(s.min)} דק׳</span><b>לצאת עד <span dir="ltr">${minusMin(target,s.min)}</span></b>`;
+  }else{
+    const dep=isFlight(e)?plusMin(e.arrTime||e.time,s.after||45):plusMin(s.departTime||e.time,0);
+    const arr=plusMin(dep.hm,s.min);
+    mid=`<span>${esc(from)} · ${md.name} · ${esc(s.min)} דק׳</span><b>הגעה בערך <span dir="ltr">${arr.hm}</span>${(arr.next||dep.next)?' (למחרת)':''}</b>`;
+  }
+  const html=`<div class="trow"><div class="mkcol"></div><div class="tr">${md.icon}${mid}${btn}${gm}</div></div>`;
+  return html;
+}
+function openHome(which){
+  const h=homeInfo(which);if(!h)return;const {e,s}=h;
+  if(RO){openSheet(`<h3>${which==='start'?'היציאה':'החזרה'}</h3><p>${esc((MODE[s.mode]||MODE.car).name)}${s.min?' · '+esc(s.min)+' דק׳':''}</p>${s.note?`<p style="white-space:pre-wrap">${esc(s.note)}</p>`:''}`);return;}
+  const opt=v=>`<option value="${v}" ${s.mode===v?'selected':''}>${MODE[v].name}</option>`;
+  const fl=isFlight(e);
+  openSheet(`<h3>${which==='start'?'יציאה לטיול':'חזרה מהטיול'}</h3>
+    <div class="m">${which==='start'?'אל: '+esc(stopTitle(e))+(fl?' · להגיע לשדה עד <span dir="ltr">'+minusMin(e.time,e.airportBuffer||180)+'</span>':' · <span dir="ltr">'+esc(e.time)+'</span>'):'מ: '+esc(stopTitle(e))+(fl?' · נחיתה <span dir="ltr">'+esc(e.arrTime||'')+'</span>':'')}</div>
+    <form id="hmForm">
+      <div class="pair"><label class="f">שם קצר<input name="label" value="${esc(s.label)}"></label>
+        <label class="f">דרך הנסיעה<select name="mode">${opt('car')}${opt('transit')}${opt('walk')}</select></label></div>
+      <label class="f">${which==='start'?'יוצאים מכתובת':'חוזרים לכתובת'}<input name="address" value="${esc(s.address)}" dir="auto" placeholder="${myHome()?'':'אפשר לשמור את הכתובת שלך בתפריט'}"></label>
+      <div class="pair"><label class="f">זמן נסיעה (דקות)<input type="number" min="0" max="2000" name="min" value="${esc(s.min)}" inputmode="numeric"></label>
+      ${which==='end'?(fl?`<label class="f">מהנחיתה עד היציאה מהשדה (דקות)<input type="number" min="0" max="600" name="after" value="${esc(s.after)}" inputmode="numeric"></label>`
+        :`<label class="f">שעת היציאה הביתה (לא חובה)<input type="time" name="departTime" value="${esc(s.departTime)}"></label>`):''}</div>
+      <label class="f">פרטי המסלול (לא חובה)<textarea name="note" rows="3" placeholder="למשל: עצירה בצומת הערבה, הרכבת של 07:12">${esc(s.note)}</textarea></label>
+      <p class="locline">${which==='end'&&!fl?'בלי שעת יציאה, החישוב מתחיל משעת התחנה האחרונה.':''} השותפים בצפייה רואים את השעות בלי הכתובת.</p>
+      <div class="btns" style="margin-top:1rem"><button class="b p" type="submit">שמירה</button></div>
+    </form>`);
+  document.getElementById('hmForm').onsubmit=x=>{x.preventDefault();const f=Object.fromEntries(new FormData(x.target).entries());
+    if(f.address===myHome())f.address='';
+    data.meta[which]=Object.assign({},data.meta[which]||{},f);save();closeSheet();render(true);};
+}
+function saveHomeAddr(){
+  const i=document.getElementById('homeAddr');if(!i)return;
+  try{localStorage.setItem(HOME_KEY,i.value.trim());}catch(e){}
+  const m=document.getElementById('homeMsg');if(m)m.textContent='נשמר ✓ הכתובת תשמש ליציאה ולחזרה בכל טיול, אלא אם תשני בטיול מסוים.';
+  render(true);
+}
+
+/* ===== Pasting a contact shared as text =====
+   Works with the Samsung text format ("value [label]" lines) and with vCard text. Everything not recognised goes to the details. */
+function parseContact(txt){
+  const clean=String(txt||'').replace(/[‎‏‪-‮⁦-⁩]/g,'').replace(/\r/g,'');
+  const out={name:'',phones:[],emails:[],address:'',urls:[],notes:[],other:[]};
+  const isPhone=v=>/^[+*#]?\d[\d\s\-().\/]*$/.test(v)&&v.replace(/\D/g,'').length>=3;
+  const isMail=v=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  const isUrl=v=>/^(https?:\/\/|www\.)/i.test(v);
+  const put=(val,label)=>{
+    val=val.trim();label=(label||'').trim();if(!val)return;
+    if(/^(שם|name|fn)$/i.test(label)){if(!out.name)out.name=val;return;}
+    if(isMail(val)){out.emails.push(val);return;}
+    if(isUrl(val)){out.urls.push(val);return;}
+    if(isPhone(val)&&!/הערות|note/i.test(label)){out.phones.push({num:val,label});return;}
+    if(/הערות|note/i.test(label)){out.notes.push(val);return;}
+    if(/כתובת|address|adr|רחוב/i.test(label)){if(!out.address)out.address=val;else out.other.push(val);return;}
+    if(!label&&!out.name&&!/\d/.test(val)){out.name=val;return;}
+    if(!out.address&&(val.includes('\n')||(/עבודה|בית|work|home|אחר|other/i.test(label)&&/\d/.test(val)&&/[א-תA-Za-z]{2}/.test(val)))){out.address=val.split('\n').map(x=>x.trim()).filter(Boolean).join(', ');return;}
+    out.other.push(label?label+': '+val:val);
+  };
+  if(/BEGIN:VCARD/i.test(clean)){
+    clean.replace(/\n[ \t]/g,'').split('\n').forEach(l=>{
+      const m=l.match(/^([A-Z\-]+)((?:;[^:]*)?):(.*)$/i);if(!m)return;
+      const k=m[1].toUpperCase(),p=m[2],v=m[3].replace(/\\n/g,'\n').replace(/\\,/g,',').replace(/\;/g,';');
+      const lab=(p.match(/TYPE=([^;:]+)/i)||[])[1]||'';
+      if(k==='FN')put(v,'שם');else if(k==='TEL')out.phones.push({num:v,label:lab});else if(k==='EMAIL')out.emails.push(v);
+      else if(k==='ADR'){const a=v.split(';').filter(Boolean).join(', ');if(a&&!out.address)out.address=a;}
+      else if(k==='NOTE')out.notes.push(v);else if(k==='URL')out.urls.push(v);else if(k==='ORG')out.other.push('ארגון: '+v.replace(/;/g,' '));
+    });
+  }else{
+    let buf=[];
+    for(const raw of clean.split('\n')){
+      const line=raw.trim();if(!line&&!buf.length)continue;
+      const lead=line.match(/^\[([^\]]+)\]\s*(.+)$/);
+      if(lead&&!buf.length){put(lead[2],lead[1]);continue;}
+      buf.push(line);
+      const m=line.match(/\[([^\]]+)\]\s*$/);
+      if(m){put(buf.join('\n').replace(/\s*\[[^\]]+\]\s*$/,''),m[1]);buf=[];}
+    }
+    buf.filter(Boolean).forEach(l=>put(l,''));
+  }
+  const mob=out.phones.find(p=>/נייד|mobile|cell/i.test(p.label))||out.phones.find(p=>/^(\+?972[\s-]?|0)5\d/.test(p.num.replace(/[\s()-]/g,'')))||out.phones[0];
+  out.phone=mob?mob.num:'';
+  return out;
+}
+function contactBtn(nameId,addrId,phoneId,emailId,notesId){
+  return `<div class="btns"><button class="b" type="button" data-act="pasteContact">הדבקת איש קשר</button></div>
+    <div id="contactBox" hidden><label class="f">מדביקים כאן איש קשר ששותף כטקסט (אנשי קשר ← ⋮ ← שיתוף ← טקסט)<textarea id="contactTxt" rows="5"></textarea></label>
+    <div class="btns"><button class="b p" type="button" data-act="fillContact" data-n="${nameId}" data-a="${addrId}" data-p="${phoneId}" data-m="${emailId}" data-d="${notesId}">מילוי הטופס</button></div></div>
+    <div class="saved" id="contactMsg"></div>`;
+}
+function pasteContact(){
+  const box=document.getElementById('contactBox'),ta=document.getElementById('contactTxt');if(!box)return;
+  box.hidden=false;ta.focus();
+  if(navigator.clipboard&&navigator.clipboard.readText){navigator.clipboard.readText().then(t=>{if(t&&!ta.value)ta.value=t;}).catch(()=>{});}
+}
+function fillContact(t){
+  const ta=document.getElementById('contactTxt');if(!ta||!ta.value.trim())return;
+  const c=parseContact(ta.value),g=id=>document.getElementById(id),msg=[];
+  const set=(id,v,label,force)=>{const i=g(id);if(!i||!v)return;if(!i.value||force){i.value=v;msg.push(label);}};
+  set(t.dataset.n,c.name,'שם');set(t.dataset.p,c.phone,'טלפון',true);set(t.dataset.m,c.emails[0],'מייל',true);set(t.dataset.a,c.address,'כתובת');
+  const extra=[];
+  const otherPhones=c.phones.filter(p=>p.num!==c.phone);
+  if(otherPhones.length)extra.push('טלפונים נוספים: '+otherPhones.map(p=>p.num+(p.label?' ('+p.label+')':'')).join(' · '));
+  if(c.emails.length>1)extra.push('מיילים נוספים: '+c.emails.slice(1).join(' · '));
+  if(c.urls.length)extra.push('אתר: '+c.urls.join(' · '));
+  if(c.notes.length)extra.push(c.notes.join('\n'));
+  if(c.other.length)extra.push(c.other.join('\n'));
+  const d=g(t.dataset.d);
+  if(d&&extra.length){d.value=(d.value?d.value.replace(/\s+$/,'')+'\n':'')+extra.join('\n');msg.push('פרטים נוספים');}
+  const nm=g(t.dataset.n);
+  g('contactBox').hidden=true;ta.value='';
+  const m=g('contactMsg');if(m)m.textContent=msg.length?'מולא: '+msg.join(', ')+'. כדאי לעבור על הטופס לפני השמירה.':'⚠ לא זיהיתי פרטים בטקסט.';
+  if(nm&&c.name&&nm.value!==c.name&&m)m.textContent+=' השם הקיים לא הוחלף.';
+}
+
+/* ===== Updating an open trip from a file =====
+   Adds what is new and fills empty details. The background texts are replaced. Your own notes, marks, photos and travel times stay as they are. */
+const MINE=new Set(['id','status','note','photos','travelMode','travelMin','travelEst','travelFrom','travelStale','travelNote','replaces','replacedBy','updated','date']);
+const MY_TEXT=new Set(['bgShort','bgMore','sources']);
+function mergeInto(target,src,rep){
+  let ch=0;
+  for(const k of Object.keys(src)){
+    if(MINE.has(k)||k==='events')continue;
+    const v=src[k];if(v===undefined||v===null||v===''||(Array.isArray(v)&&!v.length))continue;
+    const cur=target[k];
+    if(cur===undefined||cur===null||cur===''){target[k]=v;ch++;}
+    else if(MY_TEXT.has(k)&&JSON.stringify(cur)!==JSON.stringify(v)){target[k]=v;ch++;}
+    else if(JSON.stringify(cur)!==JSON.stringify(v))rep.kept++;
+  }
+  return ch;
+}
+async function updateFromFile(file){
+  const msg=t=>{const m=document.getElementById('importMsg');if(m)m.textContent=t;};
+  try{
+    const p=JSON.parse(await file.text());
+    if(p.app!=='trip-app'||p.kind!=='trip'){msg('⚠ זה לא קובץ של טיול שלם.');return;}
+    const evs=[];p.days.forEach(d=>(d.events||[]).forEach(e=>evs.push(e)));
+    const known=evs.filter(e=>ev(e.id)).length+(p.stays||[]).filter(s=>stayById(s.id)).length;
+    if(!known){msg('⚠ אף תחנה בקובץ לא נמצאה בטיול הפתוח. ייתכן שהקובץ שייך לטיול אחר – אפשר לטעון אותו כטיול חדש.');return;}
+    const rep={added:0,updated:0,kept:0,days:0};
+    for(const d of p.days){
+      const cur=dayOf(d.date);
+      if(!cur){const c=Object.assign({},d);delete c.events;c.updated=stamp();c.exported='';c.summary=c.summary||'';data.days.push(c);rep.days++;}
+      else if(mergeInto(cur,Object.assign({},d,{summary:undefined}),rep)){cur.updated=stamp();}
+    }
+    for(const e of evs){
+      const cur=ev(e.id);
+      if(!cur){const photos=[];for(const ph of (e.photos||[])){if(ph.data){try{await photoPut(ph.id,ph.data);}catch(x){}}const c=Object.assign({},ph);delete c.data;photos.push(c);}
+        data.events.push(Object.assign({},e,{photos,updated:stamp()}));rep.added++;}
+      else if(mergeInto(cur,e,rep)){cur.updated=stamp();rep.updated++;}
+    }
+    for(const s of (p.stays||[])){const cur=stayById(s.id);if(!cur){data.stays.push(Object.assign({},s,{updated:stamp()}));rep.added++;}else if(mergeInto(cur,s,rep)){cur.updated=stamp();rep.updated++;}}
+    for(const a of (p.alternatives||[])){if(!data.alternatives.some(x=>x.id===a.id)){data.alternatives.push(a);rep.added++;}}
+    if(p.trip&&p.trip.notes&&!data.meta.notes)data.meta.notes=p.trip.notes;
+    normalize();save();render(true);
+    openSheet(`<h3>הטיול עודכן ✓</h3>
+      <p>${rep.updated} פריטים קיבלו פרטים או רקע חדשים.${rep.added?' נוספו '+rep.added+' פריטים חדשים.':''}${rep.days?' נוספו '+rep.days+' ימים.':''}</p>
+      ${rep.kept?`<p class="locline">${rep.kept} פרטים שונים בקובץ ממה שיש אצלך, ונשארו כמו אצלך (למשל שעה או שם שתיקנת).</p>`:''}
+      <p class="locline">ההערות, הסימונים, התמונות וזמני הנסיעה שלך לא השתנו. כדי שהעדכון יגיע גם למכשיר השני – לסנכרן.</p>`);
+  }catch(e){msg('⚠ לא הצלחתי לקרוא את הקובץ.');}
+}
+const updateInput=document.createElement('input');updateInput.type='file';updateInput.accept='.json,application/json';updateInput.hidden=true;document.body.appendChild(updateInput);
+updateInput.addEventListener('change',()=>{const f=updateInput.files[0];updateInput.value='';if(f)updateFromFile(f);});
+
+/* ===== Deleting a trip that is shared: stop the sharing first ===== */
+async function stopShareCore(sh){
+  try{await gd('files/'+sh.fileId,{method:'DELETE'});}catch(e){if(!(e.kind==='http'&&e.status===404))throw e;}
+  if((sh.pubPhotos||[]).length){const pm=await photoMapNow();for(const pid of sh.pubPhotos){if(pm.has(pid)){try{await gd('files/'+pm.get(pid)+'/permissions/anyoneWithLink',{method:'DELETE'});}catch(e){}}}}
+}
+function deleteTripNow(){
+  const gone=activeId;const ge=idxEntry(gone);if(ge&&ge.driveId&&!ge.noSync){idx.gone=(idx.gone||[]).concat({driveId:ge.driveId,name:ge.name});}
+  try{localStorage.removeItem(tripKey(gone));localStorage.removeItem(baseKey(gone));}catch(e){}
+  idx.trips=idx.trips.filter(x=>x.id!==gone);if(!idx.trips.length){saveIndex();idx=null;try{localStorage.removeItem(IDX_KEY);}catch(e){}}
+  activeId=null;data=null;load();saveIndex();closeSheet();render();scrollToFocus();
+}
 
 /* Export */
 function fileStamp(){const n=new Date(),z=v=>String(v).padStart(2,'0');return iso(n)+'-'+z(n.getHours())+z(n.getMinutes());}
@@ -1825,6 +2013,11 @@ document.addEventListener('click',x=>{
   if(RO&&RO_BLOCK.has(a))return;
   if(a==='details')openDetails(id);
   else if(a==='share')openShare();
+  else if(a==='homeTravel')openHome(t.dataset.which);
+  else if(a==='saveHome')saveHomeAddr();
+  else if(a==='pasteContact')pasteContact();
+  else if(a==='fillContact')fillContact(t);
+  else if(a==='updateTrip')updateInput.click();
   else if(a==='sharePublish')sharePublish();
   else if(a==='shareStop')shareStop(t);
   else if(a==='shareCopy')shareCopy();
@@ -1858,7 +2051,6 @@ document.addEventListener('click',x=>{
   else if(a==='close')closeSheet();
   else if(a==='edit')openEdit(id);
   else if(a==='add')openAddChooser(ds);
-  else if(a==='pickContact')pickContact(t);
   else if(a==='sync')startSync();
   else if(a==='syncOff')syncOff();
   else if(a==='trips')openTrips();
@@ -1868,10 +2060,15 @@ document.addEventListener('click',x=>{
   else if(a==='editTrip')openTripEdit();
   else if(a==='size'){setSize(t.dataset.size);openMenu();}
   else if(a==='delTrip'){
-    if(t.dataset.sure){const gone=activeId;const ge=idxEntry(gone);if(ge&&ge.driveId&&!ge.noSync){idx.gone=(idx.gone||[]).concat({driveId:ge.driveId,name:ge.name});}
-      try{localStorage.removeItem(tripKey(gone));localStorage.removeItem(baseKey(gone));}catch(e){}
-      idx.trips=idx.trips.filter(x=>x.id!==gone);if(!idx.trips.length){saveIndex();idx=null;try{localStorage.removeItem(IDX_KEY);}catch(e){}}activeId=null;data=null;load();saveIndex();closeSheet();render();scrollToFocus();}
-    else{t.dataset.sure='1';const ge=idxEntry(activeId);t.textContent=(ge&&ge.driveId&&!ge.noSync)?'בטוחה? הטיול יימחק מהמכשיר הזה, ובסנכרון הבא גם מהדרייב':'בטוחה? הטיול יימחק מהמכשיר הזה';}
+    if(t.dataset.sure){
+      const sh=data.meta.share;
+      if(sh&&sh.fileId){const tid=activeId;authThen(async()=>{syncMsg('מפסיקה קודם את השיתוף לצפייה…');
+        try{await stopShareCore(sh);}catch(e){syncMsg(errText(e)+' הטיול לא נמחק, כדי שהשיתוף לא יישאר פתוח.');return;}
+        if(activeId===tid)deleteTripNow();});}
+      else deleteTripNow();
+    }
+    else{t.dataset.sure='1';const ge=idxEntry(activeId);const sh=data.meta.share&&data.meta.share.fileId;
+      t.textContent=sh?'בטוחה? קודם יופסק השיתוף לצפייה, ואז הטיול יימחק'+((ge&&ge.driveId&&!ge.noSync)?' מכאן ובסנכרון הבא גם מהדרייב':''):(ge&&ge.driveId&&!ge.noSync)?'בטוחה? הטיול יימחק מהמכשיר הזה, ובסנכרון הבא גם מהדרייב':'בטוחה? הטיול יימחק מהמכשיר הזה';}
   }
   else if(a==='editDay')openDayEdit(ds);
   else if(a==='newDay')openDayNew(t.dataset.pos);
