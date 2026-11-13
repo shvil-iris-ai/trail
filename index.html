@@ -620,7 +620,7 @@ function render(keepScroll){
     html+='</div></section>';
   });
   html+=`<div class="testline">${storageOK?'שמירה במכשיר פעילה ✓'+(lastSaved?' · נשמר '+lastSaved:''):'⚠ השמירה במכשיר לא זמינה בדפדפן הזה'} · ${esc(browserName())} · ${deviceHe()}
-    <br>נבנתה על ידי איריס, בעזרת Claude · גרסה 11<br><button class="reset" data-act="reset" type="button">איפוס לנתוני הדוגמה (לבדיקה בלבד)</button></div>`;
+    <br>נבנתה על ידי איריס, בעזרת Claude · גרסה 12<br><button class="reset" data-act="reset" type="button">איפוס לנתוני הדוגמה (לבדיקה בלבד)</button></div>`;
   document.getElementById('main').innerHTML=html;
   hydratePhotos(document.getElementById('main'));
   if(keepScroll)window.scrollTo(0,y);
@@ -1702,7 +1702,7 @@ function shareSend(){
 /* The viewer side */
 async function fetchView(fid){
   let r;
-  try{r=await fetch('https://www.googleapis.com/drive/v3/files/'+encodeURIComponent(fid)+'?alt=media&key='+G_VIEW_KEY);}catch(e){throw new SyncErr('net');}
+  try{r=await fetch('https://www.googleapis.com/drive/v3/files/'+encodeURIComponent(fid)+'?alt=media&key='+G_VIEW_KEY,{cache:'no-store'});}catch(e){throw new SyncErr('net');}
   if(r.status===404||r.status===403)throw new SyncErr('gone',r.status);
   if(!r.ok)throw new SyncErr('http',r.status);
   const b=await r.json();if(!b||b.kind!=='view')throw new SyncErr('gone');
