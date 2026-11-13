@@ -1,0 +1,897 @@
+<!doctype html>
+<html lang="he" dir="rtl" data-size="large">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>שביל – הטיול שלי</title>
+<meta name="theme-color" content="#6B3FA0">
+<meta name="description" content="אפליקציית טיולים: ציר זמן, יומן וספר זיכרונות">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Varela+Round&family=Rubik:wght@400;500;700&display=swap">
+<style>
+/* Layout: the whole trip as one continuous scroll; each day has a sticky purple header, its own faint background,
+   a winding dashed trail, travel lines between stops, and today's current stop enlarged into a card. */
+:root{
+  --purple:#6B3FA0; --purple-dark:#4A2063; --lilac:#A87CD8; --lilac-light:#DBC8F2;
+  --blue-deep:#1E4E8C; --blue:#4A86D8; --sky:#A9C9F2; --gold:#EFC12E; --red:#C82A4C;
+  --ink:#241A2B; --ink-soft:#5B4A6B; --paper:#FCFBFD; --white:#FFFFFF; --ok:#2E6B45;
+  --f-display:'Varela Round','Rubik',Arial,sans-serif;
+  --f-body:'Rubik',Arial,sans-serif;
+}
+html{font-size:18px}
+html[data-size="big"]{font-size:16px}
+html[data-size="large"]{font-size:18px}
+html[data-size="huge"]{font-size:21px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:1rem;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--purple)}
+button{font-family:inherit;cursor:pointer}
+button:focus-visible,textarea:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+.day{position:relative;padding-bottom:1.6rem}
+.day.city{background-color:#F9F7FB;background-repeat:repeat-y;background-size:100% auto;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 390 760' preserveAspectRatio='none'><rect width='390' height='760' fill='%23F6F2F9'/><path d='M0 610 C 90 560, 150 660, 250 600 S 360 520, 390 560' fill='none' stroke='%23A9C9F2' stroke-opacity='0.45' stroke-width='34' stroke-linecap='round'/><g stroke='%23FFFFFF' stroke-width='9' stroke-linecap='round'><line x1='0' y1='120' x2='390' y2='90'/><line x1='0' y1='300' x2='390' y2='330'/><line x1='0' y1='470' x2='390' y2='440'/><line x1='90' y1='0' x2='120' y2='760'/><line x1='250' y1='0' x2='220' y2='760'/></g><g stroke='%23FFFFFF' stroke-width='4' stroke-linecap='round'><line x1='0' y1='210' x2='390' y2='200'/><line x1='0' y1='390' x2='390' y2='395'/><line x1='170' y1='0' x2='175' y2='760'/><line x1='320' y1='0' x2='330' y2='760'/></g><rect x='130' y='130' width='80' height='60' rx='14' fill='%23DBC8F2' fill-opacity='0.45'/><rect x='20' y='660' width='120' height='70' rx='18' fill='%23DBC8F2' fill-opacity='0.45'/></svg>")}
+.day.nature{background-color:var(--paper);background-repeat:no-repeat;background-size:100% auto;background-position:top center;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 390 760'><g opacity='0.22'><rect width='390' height='760' fill='%23A9C9F2'/><circle cx='300' cy='120' r='46' fill='%23EFC12E'/><path d='M0 330 C 80 260, 160 300, 230 250 S 350 230, 390 270 V760 H0 Z' fill='%23A87CD8'/><path d='M0 430 C 100 370, 190 440, 280 390 S 370 380, 390 400 V760 H0 Z' fill='%234A86D8'/><path d='M0 540 C 120 490, 210 560, 300 510 S 370 500, 390 520 V760 H0 Z' fill='%236B3FA0'/></g></svg>")}
+
+.dayhead{position:sticky;top:env(safe-area-inset-top,0px);z-index:4;background:var(--purple);color:var(--white);border-radius:0 0 1.1rem 1.1rem;
+  padding:.65rem max(16px,env(safe-area-inset-right,0px)) .7rem max(16px,env(safe-area-inset-left,0px));display:flex;align-items:center;justify-content:space-between;gap:.6rem}
+.dayhead .eyebrow{font-size:.8rem;color:var(--lilac-light)}
+.dayhead h2{margin:0;font-family:var(--f-display);font-size:1.5rem;line-height:1.15;font-weight:400}
+.dayhead .sub{font-size:.8rem;color:var(--lilac-light)}
+.todaybadge{display:inline-block;background:var(--gold);color:var(--ink);font-weight:700;border-radius:1rem;padding:0 .5rem;margin-inline-start:.3rem}
+.sun{flex:none;width:2rem;height:2rem}
+.daybody{padding:1rem max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))}
+
+.trail{position:relative;display:flex;flex-direction:column;gap:.2rem}
+.trail::before{content:"";position:absolute;top:1rem;bottom:1rem;right:0;width:3rem;
+  background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='64' viewBox='0 0 48 64'><path d='M24 0 C 8 16, 40 48, 24 64' fill='none' stroke='%236B3FA0' stroke-width='4' stroke-dasharray='2 10' stroke-linecap='round'/></svg>") repeat-y center top / 3rem 4rem}
+.row{position:relative;display:flex;gap:.6rem;align-items:flex-start;padding:.3rem 0}
+.mkcol{width:3rem;flex:none;display:flex;justify-content:center;padding-top:.3rem}
+.mk{width:2.3rem;height:2.3rem;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;border:3px solid var(--white)}
+.mk.done{background:var(--lilac)}
+.mk.todo{background:var(--white);border:.18rem solid var(--purple);color:var(--purple)}
+.mk.cancel{background:#E7E1EE;color:var(--ink-soft)}
+.mk.cur{width:2.6rem;height:2.6rem;background:var(--red);color:var(--white);border-width:.2rem;box-shadow:0 0 0 .18rem var(--red);font-size:1.1rem}
+.mk svg{width:1.1rem;height:1.1rem}
+
+.stop{background:var(--white);border:0;border-radius:.7rem;padding:.4rem .65rem;text-align:right;color:var(--ink);min-width:0;max-width:100%;display:flex;flex-direction:column}
+.stop .t{font-size:1.15rem;font-weight:700;line-height:1.2}
+.stop .m{font-size:.85rem;color:var(--ink-soft)}
+.stop.done .t,.stop.done .m{color:var(--ink-soft)}
+.stop.cancel .t{text-decoration:line-through;color:var(--ink-soft)}
+.tag{font-size:.75rem;font-weight:700;border-radius:1rem;padding:0 .5rem;align-self:flex-start;margin-top:.15rem}
+.tag.changed{background:#FFF4D6;color:#6B4E00}
+.tag.cancel{background:#F2E6EA;color:#8A1F38}
+
+.trow{display:flex;gap:.6rem;align-items:center}
+.trow .mkcol{padding:0}
+.tr{display:flex;flex-wrap:wrap;align-items:center;gap:.15rem .5rem;background:rgba(255,255,255,.88);border:1.5px dashed var(--lilac);border-radius:.7rem;padding:.25rem .55rem;font-size:.8rem;color:var(--ink-soft);min-width:0}
+.tr svg{width:1rem;height:1rem;flex:none}
+.tr b{color:var(--purple-dark)}
+.tr.past{opacity:.6}
+.gm{color:var(--blue-deep);font-weight:700;text-decoration:underline;text-underline-offset:2px}
+
+.card{flex:0 1 auto;width:75%;min-width:0;background:var(--white);border-radius:1.1rem;overflow:hidden;box-shadow:0 .2rem 0 var(--lilac)}
+.card .band{height:2.8rem;background:var(--sky);position:relative;overflow:hidden}
+.card .band svg{position:absolute;left:0;bottom:0;height:100%;width:auto}
+.card .body{padding:.5rem .7rem .6rem;display:flex;flex-direction:column;gap:.1rem}
+.card .lbl{font-size:.8rem;font-weight:700;color:var(--purple-dark)}
+.card .t{font-size:1.3rem;font-weight:700;line-height:1.15}
+.card .m{font-size:.85rem;color:var(--ink-soft)}
+.card .btns{margin-top:.3rem}
+.card .b{min-height:2.2rem;font-size:.85rem;padding:0 .5rem}
+.btns{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.45rem}
+.b{flex:1;min-height:2.5rem;font-size:.9rem;font-weight:700;border-radius:1.25rem;border:2px solid var(--purple);background:var(--white);color:var(--purple);padding:0 .7rem}
+.b.p{background:var(--purple);color:var(--white)}
+.b.g{background:var(--gold);border-color:var(--gold);color:var(--ink)}
+.b.r{border-color:var(--red);color:var(--red)}
+.b.on{background:var(--purple);color:var(--white)}
+
+.ended{flex:0 1 auto;width:75%;background:var(--white);border-radius:1.1rem;padding:.8rem;display:flex;flex-direction:column;gap:.3rem;box-shadow:0 .2rem 0 var(--gold)}
+.ended .t{font-size:1.25rem;font-weight:700}
+.summary{margin-top:1rem;background:var(--white);border-radius:1rem;padding:.8rem;display:flex;flex-direction:column;gap:.3rem}
+.summary h3{margin:0;font-size:1rem;color:var(--purple-dark)}
+.summary .txt{white-space:pre-wrap;font-size:.95rem}
+.summary .empty{color:var(--ink-soft);font-size:.9rem}
+.expstate{font-size:.8rem;font-weight:700;border-radius:1rem;padding:.1rem .6rem;align-self:flex-start}
+.expstate.ok{background:#E3F1E8;color:var(--ok)}
+.expstate.no{background:#FFF4D6;color:#6B4E00}
+.add{width:100%;margin-top:.6rem;border-style:dashed;background:rgba(255,255,255,.7)}
+.alltrip{margin-top:.8rem;background:var(--white);border:2px solid var(--gold);border-radius:1rem;padding:.8rem}
+.testline{font-size:.7rem;color:var(--ink-soft);padding:1rem 16px 1.5rem;text-align:center}
+
+nav{position:sticky;bottom:0;z-index:5;display:flex;gap:.45rem;background:var(--white);
+  padding:.55rem max(16px,env(safe-area-inset-right,0px)) calc(.7rem + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));box-shadow:0 -1px 0 var(--lilac-light)}
+nav .b{min-height:2.7rem}
+nav .size{flex:none;width:3.2rem}
+nav .b:disabled{opacity:.35;cursor:default}
+
+.sheet{position:fixed;inset:0;z-index:20;background:rgba(36,26,43,.5);display:flex;align-items:flex-end;justify-content:center}
+.sheet[hidden]{display:none}
+.panel{background:var(--white);width:100%;max-width:40rem;max-height:92vh;overflow:auto;border-radius:1.2rem 1.2rem 0 0;
+  padding:1rem max(16px,env(safe-area-inset-right,0px)) calc(1.4rem + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.panel h3{margin:0;font-size:1.5rem;line-height:1.15}
+.panel .m{color:var(--ink-soft);font-size:.9rem}
+.panel h4{margin:1rem 0 .25rem;font-size:1rem;color:var(--purple-dark)}
+.panel p{margin:.25rem 0}
+.close{float:left;width:2.6rem;height:2.6rem;border:0;background:var(--paper);border-radius:50%;font-size:1.2rem;color:var(--ink-soft)}
+.more{background:var(--paper);border-radius:.8rem;padding:.6rem .7rem;margin-top:.4rem}
+.src{font-size:.8rem;color:var(--ink-soft);margin-top:.5rem}
+label.f{display:block;margin-top:.6rem;font-size:.85rem;color:var(--ink-soft)}
+input,textarea,select{width:100%;font:inherit;font-size:1rem;padding:.45rem .55rem;border-radius:.6rem;border:2px solid var(--lilac-light);background:var(--paper);color:var(--ink)}
+textarea{min-height:5rem;resize:vertical}
+.pair{display:flex;gap:.5rem}.pair>*{flex:1;min-width:0}
+.saved{font-size:.8rem;color:var(--ok);min-height:1.1rem}
+
+.card .band.photo{height:6rem;background:var(--lilac-light)}
+.card .band img{width:100%;height:100%;object-fit:cover;display:block}
+a.b{display:flex;align-items:center;justify-content:center;text-decoration:none;text-align:center}
+.dayactions{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.8rem}
+.thumbs{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.3rem}
+.thumbs button{padding:0;border:0;background:var(--lilac-light);width:5rem;height:5rem;border-radius:.6rem;overflow:hidden}
+.thumbs img{width:100%;height:100%;object-fit:cover;display:block}
+.locline{font-size:.85rem;color:var(--ink-soft)}
+.mapwrap{height:62vh;border-radius:.8rem;overflow:hidden;margin-top:.6rem;background:#EEE9F4;direction:ltr}
+.numpin{width:30px;height:30px;border-radius:50%;background:#6B3FA0;color:#fff;border:3px solid #fff;display:flex;align-items:center;justify-content:center;font:700 14px Rubik,Arial,sans-serif;box-shadow:0 1px 4px rgba(0,0,0,.35)}
+.numpin.done{background:#A87CD8}
+.numpin.cur{background:#C82A4C}
+.pop{direction:rtl;text-align:right;font-family:Rubik,Arial,sans-serif;min-width:9rem}
+.pop img{width:100%;max-width:12rem;border-radius:.4rem;display:block;margin-top:.3rem}
+.photoview img{max-width:100%;max-height:70vh;border-radius:.6rem}
+.reset{background:none;border:0;color:var(--ink-soft);text-decoration:underline;font:inherit;font-size:.7rem;cursor:pointer}
+.driver{position:fixed;inset:0;z-index:30;background:var(--white);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:1rem;padding:2rem 1.2rem;text-align:center}
+.driver[hidden]{display:none}
+.driver .big{font-size:2.6rem;font-weight:700;line-height:1.1;direction:ltr}
+.driver .addr{font-size:1.6rem;direction:ltr}
+.driver .he{font-size:1rem;color:var(--ink-soft)}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<main id="main"></main>
+<nav>
+  <button class="b" id="prevDay" type="button">יום קודם</button>
+  <button class="b size" id="sizeBtn" type="button" aria-label="שינוי גודל הטקסט">א+</button>
+  <button class="b" id="nextDay" type="button">יום הבא</button>
+</nav>
+<div class="sheet" id="sheet" hidden><div class="panel" id="panel" role="dialog" aria-modal="true"></div></div>
+<div class="driver" id="driver" hidden></div>
+<input type="file" id="photoInput" accept="image/*" multiple hidden>
+
+<script>
+const KEY='trip-app-v1', SIZE_KEY='trip-app-size';
+let data, storageOK=true, lastSaved='';
+
+const CHECK='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10" fill="none" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const SUN='<svg class="sun" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="13" fill="#EFC12E"/><g stroke="#EFC12E" stroke-width="4" stroke-linecap="round"><line x1="32" y1="5" x2="32" y2="12"/><line x1="32" y1="52" x2="32" y2="59"/><line x1="5" y1="32" x2="12" y2="32"/><line x1="52" y1="32" x2="59" y2="32"/><line x1="13" y1="13" x2="18" y2="18"/><line x1="46" y1="46" x2="51" y2="51"/><line x1="13" y1="51" x2="18" y2="46"/><line x1="46" y1="18" x2="51" y2="13"/></g></svg>';
+const BAND={
+  city:'<svg viewBox="0 0 260 92" aria-hidden="true"><circle cx="40" cy="28" r="15" fill="#EFC12E"/><path d="M80 92 V60 H190 V92 Z" fill="#4A86D8"/><path d="M90 60 A45 36 0 0 1 180 60 Z" fill="#1E4E8C"/><rect x="90" y="66" width="8" height="26" fill="#A9C9F2"/><rect x="112" y="66" width="8" height="26" fill="#A9C9F2"/><rect x="150" y="66" width="8" height="26" fill="#A9C9F2"/><rect x="172" y="66" width="8" height="26" fill="#A9C9F2"/></svg>',
+  nature:'<svg viewBox="0 0 260 92" aria-hidden="true"><circle cx="200" cy="26" r="14" fill="#EFC12E"/><path d="M0 70 C 60 40, 120 64, 180 46 S 240 50, 260 56 V92 H0 Z" fill="#A87CD8"/><path d="M0 84 C 70 64, 140 86, 200 70 S 250 72, 260 76 V92 H0 Z" fill="#6B3FA0"/><rect x="40" y="58" width="22" height="16" fill="#FCFBFD"/><path d="M37 58 L51 48 L65 58 Z" fill="#C82A4C"/></svg>'
+};
+const MODE={
+  walk:{name:'ברגל',gm:'walking',icon:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="13" cy="4" r="2" fill="#6B3FA0"/><path d="M12 7l-3 4 2 2v7M12 7l3 5h3M11 13l-3 7" fill="none" stroke="#6B3FA0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'},
+  car:{name:'ברכב',gm:'driving',icon:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15l2-6h12l2 6v3H4z" fill="none" stroke="#6B3FA0" stroke-width="2" stroke-linejoin="round"/><circle cx="8" cy="18" r="1.8" fill="#6B3FA0"/><circle cx="16" cy="18" r="1.8" fill="#6B3FA0"/></svg>'},
+  transit:{name:'בתחבורה ציבורית',gm:'transit',icon:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="15" rx="3" fill="none" stroke="#6B3FA0" stroke-width="2"/><path d="M5 11h14M8 21l1.5-3M16 21l-1.5-3" stroke="#6B3FA0" stroke-width="2" stroke-linecap="round"/></svg>'}
+};
+
+function iso(d){const z=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate());}
+function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x;}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function uid(){return 'e'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function nowHM(){const n=new Date();return String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0');}
+function dayLabel(ds){const[y,m,d]=ds.split('-').map(Number);return new Date(y,m-1,d).toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long'});}
+function stamp(){return new Date().toISOString();}
+function minusMin(hm,min){const[h,m]=hm.split(':').map(Number);let t=h*60+m-Number(min);t=((t%1440)+1440)%1440;return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');}
+function device(){return /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)?'phone':'computer';}
+function deviceHe(){return device()==='phone'?'טלפון':'מחשב';}
+
+/* Approximate map positions for the sample stops only (for testing the day map) */
+const COORDS={
+  'Aeroporto di Fiumicino':{lat:41.8003,lng:12.2389},'Hotel':{lat:41.8992,lng:12.4731},'Trastevere':{lat:41.8894,lng:12.4703},
+  'Colosseo':{lat:41.8902,lng:12.4922},'Mercato di Testaccio':{lat:41.8769,lng:12.4747},'Pantheon':{lat:41.8986,lng:12.4769},
+  'Fontana di Trevi':{lat:41.9009,lng:12.4833},"Val d'Orcia":{lat:43.0640,lng:11.6150},'Pienza':{lat:43.0766,lng:11.6790},'Montalcino':{lat:43.0586,lng:11.4892},
+  'Musei Capitolini':{lat:41.8933,lng:12.4828},'Galleria Borghese':{lat:41.9142,lng:12.4922},'Basilica di San Clemente':{lat:41.8893,lng:12.4976},
+  'Terrazza del Pincio':{lat:41.9113,lng:12.4797},'Piazza di Spagna':{lat:41.9058,lng:12.4823},'Foro Romano':{lat:41.8925,lng:12.4853},
+  'Montepulciano':{lat:43.0920,lng:11.7808},'Bagno Vignoni':{lat:43.0275,lng:11.6189}
+};
+/* Sample alternatives, per city, marked indoor or outdoor */
+function defaultAlts(){
+  const N='חלופה לדוגמה. בגרסה האמיתית הפרטים יאומתו מול מקורות.';
+  const A=(city,indoor,title,local,address,details)=>Object.assign({id:'a'+uid(),city,indoor,title,local,address,details:details||'',bgShort:'',bgMore:N,sources:'',used:false},COORDS[local]||{});
+  return [
+    A('רומא',true,'המוזיאונים הקפיטוליניים','Musei Capitolini','Piazza del Campidoglio, Roma','מוזיאון גדול על גבעת הקפיטול.'),
+    A('רומא',true,'גלריה בורגזה','Galleria Borghese','Piazzale Scipione Borghese, 5, Roma','הכניסה בהזמנה מראש בלבד.'),
+    A('רומא',true,'בזיליקת סן קלמנטה','Basilica di San Clemente','Via Labicana, 95, Roma','כנסייה שמתחתיה שכבות של מבנים קדומים יותר.'),
+    A('רומא',false,'תצפית מגבעת הפינצ׳ו','Terrazza del Pincio','Piazzale Napoleone I, Roma','תצפית על העיר, יפה בשקיעה.'),
+    A('רומא',false,'המדרגות הספרדיות','Piazza di Spagna','Piazza di Spagna, Roma',''),
+    A('רומא',false,'הפורום הרומי','Foro Romano','Via della Salara Vecchia, 5/6, Roma','הליכה בשטח פתוח, מומלץ כובע ומים.'),
+    A('טוסקנה',true,'מרתפי יין במונטפולצ׳אנו','Montepulciano','Montepulciano, Toscana','סיור ביקבים הישנים בתוך העיירה.'),
+    A('טוסקנה',false,'באניו ויניוני','Bagno Vignoni','Bagno Vignoni, Toscana','כפר קטן עם בריכה תרמית במרכז הכיכר.')
+  ];
+}
+function dayCity(day){return day.city||(/רומא/.test(day.title)?'רומא':(day.type==='nature'?'טוסקנה':day.title));}
+function sample(){
+  const t=new Date();t.setHours(0,0,0,0);
+  const d0=iso(addDays(t,-1)),d1=iso(t),d2=iso(addDays(t,1));
+  const NOTE='טקסט לדוגמה. בגרסה האמיתית כל עובדה תאומת מול מקורות.';
+  const SRC='מקורות יוצגו כאן אחרי האימות.';
+  const E=(date,time,title,local,address,extra)=>Object.assign({id:uid(),date,time,title,local,address,details:'',bgShort:'',bgMore:'',sources:'',status:'planned',note:'',travelMode:'',travelMin:'',travelEst:true,photos:[],updated:stamp()},extra||{},(COORDS[local]||{}));
+  return {
+    days:[
+      {date:d0,title:'רומא',city:'רומא',sub:'יום הגעה',type:'city',summary:'הגענו בצהריים, עייפים אבל מאושרים. טרסטוורה בערב הייתה בדיוק מה שהיינו צריכים.',updated:stamp(),exported:''},
+      {date:d1,title:'רומא, ברגל',city:'רומא',sub:'',type:'city',summary:'',updated:stamp(),exported:''},
+      {date:d2,title:'ואל ד׳אורצ׳ה',city:'טוסקנה',sub:'יום ברכב',type:'nature',summary:'',updated:stamp(),exported:''}
+    ],
+    alternatives:defaultAlts(),
+    events:[
+      E(d0,'14:30','נחיתה בפיומיצ׳ינו','Aeroporto di Fiumicino','Aeroporto di Fiumicino, Roma',{details:'קוד הזמנה לדוגמה: ABC123',status:'done'}),
+      E(d0,'17:00','צ׳ק-אין במלון','Hotel','Piazza Navona, Roma',{details:'צ׳ק-אין מ-15:00. ארוחת בוקר כלולה.',status:'done',travelMode:'car',travelMin:'45'}),
+      E(d0,'20:00','ערב בטרסטוורה','Trastevere','Piazza di Santa Maria in Trastevere, Roma',{status:'done',note:'ישבנו בכיכר סנטה מריה עד מאוחר.',travelMode:'walk',travelMin:'20'}),
+      E(d1,'09:00','הקולוסיאום','Colosseo','Piazza del Colosseo, 1, Roma',{details:'כרטיסים עם קוד QR. להגיע 15 דקות לפני.',status:'done',
+        bgShort:'האמפיתיאטרון נבנה בתקופת השושלת הפלאבית: הבנייה החלה בימי הקיסר אספסיאנוס, והמבנה נחנך בימי בנו טיטוס בשנת 80 לספירה. הוא שימש לקרבות גלדיאטורים ולמופעים ציבוריים.',
+        bgMore:'לפי המסורת, השם "קולוסיאום" לא בא מגודל המבנה עצמו אלא מפסל ענק של נירון שעמד בסמוך. '+NOTE,sources:SRC}),
+      E(d1,'13:00','צהריים בשוק טסטאצ׳ו','Mercato di Testaccio','Via Aldo Manuzio, Roma',{details:'דוכני אוכל רבים. סגור בימי ראשון.',travelMode:'transit',travelMin:'20'}),
+      E(d1,'15:30','הפנתיאון','Pantheon','Piazza della Rotonda, Roma',{details:'סגור לביקורים בזמן טקסים.',travelMode:'transit',travelMin:'30',cancelPolicy:'כרטיס שהוזמן מראש: ביטול בחינם עד 24 שעות לפני (דוגמה)',
+        bgShort:'המבנה הקיים נבנה בתקופת הקיסר אדריאנוס, בתחילת המאה השנייה לספירה, במקום מקדש קודם. הכיפה עשויה בטון, ובמרכזה פתח עגול שדרכו נכנס האור.',
+        bgMore:'על החזית מופיע שמו של אגריפס, שבנה את המקדש הקודם במקום, ולא שמו של אדריאנוס. '+NOTE,sources:SRC}),
+      E(d1,'19:00','מזרקת טרווי','Fontana di Trevi','Piazza di Trevi, Roma',{details:'יפה במיוחד בערב. צפוף.',travelMode:'walk',travelMin:'10',
+        bgShort:'המזרקה תוכננה בידי האדריכל ניקולה סאלווי והושלמה בשנת 1762.',
+        bgMore:'לפי המסורת, מי שזורק מטבע למזרקה עוד יחזור לרומא. '+NOTE,sources:SRC}),
+      E(d2,'10:00','תצפית על העמק','Val d\'Orcia','Val d\'Orcia, Toscana',{bgShort:'עמק בדרום טוסקנה, הכלול ברשימת אתרי המורשת העולמית של אונסק״ו.',bgMore:NOTE,sources:SRC}),
+      E(d2,'13:00','צהריים בפיינצה','Pienza','Pienza, Toscana',{travelMode:'car',travelMin:'25',bgShort:'עיירה שנבנתה מחדש באמצע המאה ה-15 ביוזמת האפיפיור פיוס השני, כ"עיר אידיאלית" ברוח הרנסנס.',bgMore:NOTE,sources:SRC}),
+      E(d2,'17:00','מונטלצ׳ינו','Montalcino','Montalcino, Toscana',{details:'עיירת היין המוכרת בזכות יין הברונלו.',travelMode:'car',travelMin:'35'})
+    ]
+  };
+}
+
+function prevActive(e){const act=eventsOf(e.date).filter(v=>v.status!=='cancelled'),i=act.indexOf(e);return i>0?act[i-1]:null;}
+function normalize(){
+  if(!Array.isArray(data.alternatives))data.alternatives=defaultAlts();
+  data.days.forEach(d=>{if(d.updated===undefined)d.updated=stamp();if(d.exported===undefined)d.exported='';});
+  data.events.forEach(e=>{if(!Array.isArray(e.photos))e.photos=[];});
+  data.events.forEach(e=>{if(e.travelMin&&e.travelFrom===undefined&&e.status!=='cancelled'){const p=prevActive(e);e.travelFrom=(e.travelStale||(p&&p.updated>e.updated))?null:(p?p.id:null);}});
+  data.events.forEach(e=>{if(!Array.isArray(e.photos))e.photos=[];if((e.lat===undefined||e.lat===''||e.lat===null)&&COORDS[e.local]){e.lat=COORDS[e.local].lat;e.lng=COORDS[e.local].lng;}if(e.travelMode===undefined)e.travelMode='';if(e.travelMin===undefined)e.travelMin='';if(e.travelEst===undefined)e.travelEst=true;});
+}
+function load(){
+  try{
+    localStorage.setItem(KEY+'-t','1');localStorage.removeItem(KEY+'-t');
+    const s=localStorage.getItem(KEY);
+    if(s){data=JSON.parse(s);normalize();return;}
+  }catch(e){storageOK=false;}
+  data=sample();
+}
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify(data));storageOK=true;lastSaved=nowHM();}
+  catch(e){storageOK=false;}
+}
+function setSize(sz){document.documentElement.dataset.size=sz;try{localStorage.setItem(SIZE_KEY,sz);}catch(e){}}
+function loadSize(){try{const s=localStorage.getItem(SIZE_KEY);if(s)document.documentElement.dataset.size=s;}catch(e){}}
+
+function sortedDays(){return data.days.slice().sort((a,b)=>a.date.localeCompare(b.date));}
+function eventsOf(ds){return data.events.filter(e=>e.date===ds).sort((a,b)=>a.time.localeCompare(b.time));}
+function ev(id){return data.events.find(e=>e.id===id);}
+function dayOf(ds){return data.days.find(d=>d.date===ds);}
+function touchDay(ds){const d=dayOf(ds);if(d)d.updated=stamp();}
+function unexported(day){
+  const since=day.exported||'';
+  let n=eventsOf(day.date).filter(e=>!since||e.updated>since).length;
+  if(!since||day.updated>since)n+=day.summary||since?1:0;
+  return n;
+}
+function browserName(){
+  const u=navigator.userAgent;
+  if(/SamsungBrowser/.test(u))return 'Samsung Internet';
+  if(/EdgA|Edg\//.test(u))return 'Edge';
+  if(/Firefox/.test(u))return 'Firefox';
+  if(/Chrome/.test(u))return 'Chrome';
+  if(/Safari/.test(u))return 'Safari';
+  return 'דפדפן אחר';
+}
+
+function point(e){return (e.lat!==undefined&&e.lat!==null&&e.lat!=='')?(e.lat+','+e.lng):(e.address||e.local||e.title);}
+function gmUrl(prev,e){
+  const md=MODE[e.travelMode]||MODE.walk;
+  return 'https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(point(prev))+'&destination='+encodeURIComponent(point(e))+'&travelmode='+md.gm;
+}
+/* Google Maps links accept an origin, a destination and up to 9 stops between them, so longer days are split into parts */
+function dayRouteLinks(day,evs){
+  const stops=evs.filter(e=>e.status!=='cancelled');
+  if(stops.length<2)return '';
+  const mode=day.type==='nature'?'driving':'walking';
+  const parts=[];let i=0;
+  while(i<stops.length-1){const chunk=stops.slice(i,i+11);parts.push(chunk);i+=chunk.length-1;}
+  return parts.map((c,k)=>{
+    const url='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(point(c[0]))+'&destination='+encodeURIComponent(point(c[c.length-1]))
+      +(c.length>2?'&waypoints='+c.slice(1,-1).map(e=>encodeURIComponent(point(e))).join('%7C'):'')+'&travelmode='+mode;
+    return `<a class="b" href="${url}" target="_blank" rel="noopener">${parts.length>1?'מסלול ב-Google Maps, חלק '+(k+1):'המסלול של היום ב-Google Maps'}</a>`;
+  }).join('');
+}
+
+/* Photos live in the browser's larger photo store (IndexedDB); the trip data keeps only their details */
+let dbp=null; const photoCache=new Map();
+function idb(){
+  if(dbp)return dbp;
+  dbp=new Promise((res,rej)=>{try{const r=indexedDB.open('trip-app-photos',1);
+    r.onupgradeneeded=()=>r.result.createObjectStore('photos');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);}catch(e){rej(e);}});
+  return dbp;
+}
+async function photoPut(id,url){const db=await idb();return new Promise((res,rej)=>{const tx=db.transaction('photos','readwrite');tx.objectStore('photos').put(url,id);tx.oncomplete=()=>{photoCache.set(id,url);res();};tx.onerror=()=>rej(tx.error);tx.onabort=()=>rej(tx.error);});}
+async function photoGet(id){
+  if(photoCache.has(id))return photoCache.get(id);
+  try{const db=await idb();return await new Promise(res=>{const r=db.transaction('photos').objectStore('photos').get(id);r.onsuccess=()=>{const u=r.result||null;if(u)photoCache.set(id,u);res(u);};r.onerror=()=>res(null);});}
+  catch(e){return null;}
+}
+async function photoDel(id){photoCache.delete(id);try{const db=await idb();db.transaction('photos','readwrite').objectStore('photos').delete(id);}catch(e){}}
+async function photoClearAll(){photoCache.clear();try{const db=await idb();db.transaction('photos','readwrite').objectStore('photos').clear();}catch(e){}}
+function hydratePhotos(root){
+  (root||document).querySelectorAll('img[data-photo]').forEach(async img=>{if(img.getAttribute('src'))return;const u=await photoGet(img.dataset.photo);if(u)img.src=u;});
+}
+function resizeImage(file){
+  return new Promise((res,rej)=>{
+    const url=URL.createObjectURL(file),img=new Image();
+    img.onload=()=>{const max=1280;let w=img.naturalWidth,h=img.naturalHeight;const s=Math.min(1,max/Math.max(w,h));w=Math.round(w*s);h=Math.round(h*s);
+      const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);URL.revokeObjectURL(url);
+      res({url:c.toDataURL('image/jpeg',0.72),w,h});};
+    img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('image'));};
+    img.src=url;
+  });
+}
+function photoImg(p){const u=photoCache.get(p.id);return `<img data-photo="${p.id}" ${u?`src="${u}"`:''} alt="${esc(p.name)}">`;}
+/* Today's current stop follows the clock: the stop whose time has come and whose next stop has not started yet.
+   Earlier stops that were not marked are shown as 'not marked' instead of holding the enlarged card. */
+function currentStop(evs,hm){
+  const act=evs.filter(e=>e.status!=='cancelled');
+  let idx=-1; act.forEach((e,i)=>{if(e.time<=hm)idx=i;});
+  const unmarked=new Set(); for(let i=0;i<idx;i++){if(act[i].status!=='done')unmarked.add(act[i].id);}
+  for(let i=Math.max(idx,0);i<act.length;i++){if(act[i].status!=='done'){unmarked.delete(act[i].id);return {cur:act[i],ended:false,unmarked};}}
+  return {cur:null,ended:act.length>0,unmarked};
+}
+function travelRow(prev,e,past){
+  if(!prev||e.status==='cancelled')return '';
+  const md=MODE[e.travelMode]||MODE.walk;
+  const url=gmUrl(prev,e);
+  if(!e.travelMin){
+    return `<div class="trow"><div class="mkcol"></div><div class="tr ${past?'past':''}">${md.icon}<span>זמן הנסיעה לא הוזן</span>
+      <button class="gm" style="background:none;border:0;padding:0;font:inherit" data-act="travel" data-id="${e.id}" type="button">הוספת זמן</button>
+      <a class="gm" href="${url}" target="_blank" rel="noopener">בדיקה ב-Google Maps</a></div></div>`;
+  }
+  const leave=minusMin(e.time,e.travelMin);
+  return `<div class="trow"><div class="mkcol"></div><div class="tr ${past?'past':''}">${md.icon}<span>${md.name} · ${esc(e.travelMin)} דק׳${e.travelEst?' (משוער)':''}</span><b>לצאת עד <span dir="ltr">${leave}</span></b>${(e.travelStale||(e.travelFrom!==undefined&&e.travelFrom!==prev.id))?'<b style="color:var(--red)">· לבדוק שוב, התחנה הקודמת השתנתה</b>':''}
+    <button class="gm" style="background:none;border:0;padding:0;font:inherit" data-act="travel" data-id="${e.id}" type="button">תיקון</button>
+    <a class="gm" href="${url}" target="_blank" rel="noopener">בדיקה ב-Google Maps</a></div></div>`;
+}
+function openTravel(id){
+  const e=ev(id); if(!e)return;
+  const evs=eventsOf(e.date).filter(v=>v.status!=='cancelled'), i=evs.indexOf(e), prev=i>0?evs[i-1]:null;
+  const opt=v=>`<option value="${v}" ${(e.travelMode||'walk')===v?'selected':''}>${MODE[v].name}</option>`;
+  openSheet(`<h3>זמן נסיעה</h3>
+    <div class="m">${prev?esc(prev.title)+' ← ':''}${esc(e.title)} · מגיעים ב-<span dir="ltr">${esc(e.time)}</span></div>
+    <form id="trForm">
+      <div class="pair">
+        <label class="f">איך מגיעים<select name="travelMode" id="t_mode">${opt('walk')}${opt('transit')}${opt('car')}</select></label>
+        <label class="f">כמה דקות<input type="number" min="0" max="600" name="travelMin" id="t_min" value="${esc(e.travelMin)}" inputmode="numeric" required></label>
+      </div>
+      ${prev?`<p class="m" style="margin-top:.6rem">לא בטוחה? <a class="gm" id="t_gm" href="${gmUrl(prev,e)}" target="_blank" rel="noopener">בדיקה ב-Google Maps</a></p>`:''}
+      <div class="btns" style="margin-top:1rem"><button class="b p" type="submit">שמירה</button></div>
+    </form>`);
+  const sel=document.getElementById('t_mode'), gm=document.getElementById('t_gm');
+  sel.onchange=()=>{if(gm&&prev){gm.href=gmUrl(prev,Object.assign({},e,{travelMode:sel.value}));}};
+  document.getElementById('trForm').onsubmit=x=>{
+    x.preventDefault();
+    e.travelMode=sel.value; e.travelMin=document.getElementById('t_min').value; e.travelEst=false; e.travelStale=false; e.travelFrom=prev?prev.id:null; e.updated=stamp();
+    save();closeSheet();render(true);
+  };
+  setTimeout(()=>{const m=document.getElementById('t_min');if(m)m.focus();},50);
+}
+
+function render(keepScroll){
+  const y=window.scrollY;
+  const days=sortedDays(); if(!days.length)return;
+  const today=iso(new Date()), hm=nowHM();
+  const inTrip=days.some(d=>d.date===today), beforeTrip=today<days[0].date;
+  let html='';
+  days.forEach((day,i)=>{
+    const evs=eventsOf(day.date), active=evs.filter(e=>e.status!=='cancelled');
+    const doneN=active.filter(e=>e.status==='done').length;
+    const isToday=day.date===today;
+    let cur=null,curLbl='',ended=false;
+    let unmarked=new Set();
+    if(isToday){const cs=currentStop(evs,hm);cur=cs.cur;ended=cs.ended;unmarked=cs.unmarked;if(cur)curLbl=(cur.time<=hm?'עכשיו':'הבא בתור')+' · ';}
+    else if(beforeTrip&&i===0){cur=active[0]||null;if(cur)curLbl='מתחילים ב-';}
+    const pastDay=day.date<today;
+
+    html+=`<section class="day ${day.type==='nature'?'nature':'city'}" id="day-${day.date}" data-idx="${i}">
+      <header class="dayhead"><div style="min-width:0">
+        <div class="eyebrow">יום ${i+1} · ${esc(dayLabel(day.date))}${isToday?'<span class="todaybadge">היום</span>':''}</div>
+        <h2>${esc(day.title)}</h2>
+        <div class="sub">${active.length} תחנות${doneN?' · '+doneN+' מאחורייך':''}${day.sub?' · '+esc(day.sub):''}</div>
+      </div>${SUN}</header><div class="daybody"><div class="trail">`;
+    let n=0,prev=null;
+    evs.forEach(e=>{
+      const num=e.status==='cancelled'?'':String(++n);
+      html+=travelRow(prev,e,pastDay||e.status==='done');
+      if(e===cur){
+        html+=`<div class="row" id="curRow"><div class="mkcol"><div class="mk cur">${num}</div></div>
+          <section class="card">${e.photos.length?`<div class="band photo">${photoImg(e.photos[e.photos.length-1])}</div>`:`<div class="band">${BAND[day.type]||BAND.city}</div>`}<div class="body">
+            <div class="lbl">${esc(curLbl)}<span dir="ltr">${esc(e.time)}</span></div>
+            <div class="t">${esc(e.title)}</div><div class="m">${esc(e.local)}</div>
+            <div class="btns">
+              <button class="b p" data-act="details" data-id="${e.id}" type="button">פרטים</button>
+              <button class="b" data-act="driver" data-id="${e.id}" type="button">לנהג</button>
+              ${isToday?`<button class="b g" data-act="done" data-id="${e.id}" type="button">✓ היה</button>`:''}
+            </div></div></section></div>`;
+      }else{
+        const cls=e.status==='done'?'done':e.status==='cancelled'?'cancel':'';
+        const mk=e.status==='done'?`<div class="mk done">${CHECK}</div>`:e.status==='cancelled'?'<div class="mk cancel">✕</div>':`<div class="mk todo">${num}</div>`;
+        const tag=e.status==='cancelled'?`<span class="tag cancel">${e.replacedBy?'הוחלף':'בוטל'}</span>`:unmarked.has(e.id)?'<span class="tag" style="background:#EEE9F4;color:var(--ink-soft)">השעה עברה · לא סומן</span>':e.replaces?'<span class="tag changed">חלופה</span>':e.status==='changed'?'<span class="tag changed">השתנה</span>':'';
+        html+=`<div class="row"><div class="mkcol">${mk}</div>
+          <button class="stop ${cls}" data-act="details" data-id="${e.id}" type="button">
+            <span class="t">${esc(e.title)}</span><span class="m"><span dir="ltr">${esc(e.time)}</span> · ${esc(e.local)}${e.photos.length?' · '+e.photos.length+(e.photos.length===1?' תמונה':' תמונות'):''}</span>${tag}</button></div>`;
+      }
+      if(e.status!=='cancelled')prev=e;
+    });
+    if(ended){
+      html+=`<div class="row" id="endedRow"><div class="mkcol"><div class="mk done">${CHECK}</div></div>
+        <section class="ended"><div class="t">היום הסתיים</div>
+        <div class="m" style="color:var(--ink-soft)">${doneN} תחנות מאחורייך. רוצה לכתוב כמה מילים על היום?</div>
+        <div class="btns"><button class="b p" data-act="summary" data-date="${day.date}" type="button">כתיבת סיכום היום</button></div></section></div>`;
+    }
+    html+='</div>';
+    const altN=data.alternatives.filter(a=>a.city===dayCity(day)&&!a.used).length;
+    html+=`<div class="dayactions">${dayRouteLinks(day,evs)}<button class="b p" data-act="dayMap" data-date="${day.date}" type="button">מפת היום</button>
+      ${altN?`<button class="b" data-act="alts" data-date="${day.date}" type="button">חלופות ב${esc(dayCity(day))} (${altN})</button>`:''}</div>`;
+    const un=unexported(day);
+    const exp=day.exported&&!un
+      ?`<span class="expstate ok">יוצא ✓ ${esc(new Date(day.exported).toLocaleString('he-IL',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}))}</span>`
+      :`<span class="expstate no">${day.exported?un+' שינויים שלא גובו':'עוד לא יוצא'}</span>`;
+    html+=`<section class="summary"><h3>סיכום היום</h3>${day.summary?`<div class="txt">${esc(day.summary)}</div>`:'<div class="empty">עוד לא נכתב סיכום ליום הזה.</div>'}
+      <div class="btns"><button class="b" data-act="summary" data-date="${day.date}" type="button">${day.summary?'עריכת הסיכום':'כתיבת סיכום'}</button>
+      <button class="b" data-act="exportDay" data-date="${day.date}" type="button">ייצוא היום הזה</button></div>${exp}</section>`;
+    html+=`<button class="b add" data-act="add" data-date="${day.date}" type="button">+ הוספת תחנה ליום הזה</button>`;
+    if(i===days.length-1){
+      html+=`<section class="alltrip"><h3 style="margin:0;font-size:1rem;color:var(--purple-dark)">סוף הטיול</h3>
+        <p class="m" style="margin:.2rem 0;color:var(--ink-soft);font-size:.85rem">קובץ אחד עם כל הימים, בשביל ספר הזיכרונות.</p>
+        <div class="btns"><button class="b g" data-act="exportAll" type="button">ייצוא כל הטיול</button></div></section>`;
+    }
+    html+='</div></section>';
+  });
+  html+=`<div class="testline">${storageOK?'שמירה במכשיר פעילה ✓'+(lastSaved?' · נשמר '+lastSaved:''):'⚠ השמירה במכשיר לא זמינה בדפדפן הזה'} · ${esc(browserName())} · ${deviceHe()}
+    <br>נבנתה על ידי איריס, בעזרת Claude<br><button class="reset" data-act="reset" type="button">איפוס לנתוני הדוגמה (לבדיקה בלבד)</button></div>`;
+  document.getElementById('main').innerHTML=html;
+  hydratePhotos(document.getElementById('main'));
+  if(keepScroll)window.scrollTo(0,y);
+  updateNav();
+}
+
+function scrollToFocus(){
+  const el=document.getElementById('curRow')||document.getElementById('endedRow');
+  if(el){el.scrollIntoView({block:'center'});return;}
+  const days=sortedDays(),today=iso(new Date());
+  const target=days.find(d=>d.date>=today)||days[days.length-1];
+  const s=document.getElementById('day-'+target.date); if(s)s.scrollIntoView({block:'start'});
+}
+function visibleIdx(){
+  const secs=[...document.querySelectorAll('.day')];let idx=0;
+  secs.forEach((s,i)=>{if(s.getBoundingClientRect().top<=60)idx=i;});
+  return idx;
+}
+function jumpDay(delta){
+  const secs=[...document.querySelectorAll('.day')];
+  const i=Math.max(0,Math.min(secs.length-1,visibleIdx()+delta));
+  secs[i].scrollIntoView({block:'start'});setTimeout(updateNav,50);
+}
+function updateNav(){
+  const secs=document.querySelectorAll('.day'),i=visibleIdx();
+  document.getElementById('prevDay').disabled=i<=0&&(!secs[0]||secs[0].getBoundingClientRect().top>=-5);
+  document.getElementById('nextDay').disabled=i>=secs.length-1;
+}
+let navTimer=null;
+window.addEventListener('scroll',()=>{clearTimeout(navTimer);navTimer=setTimeout(updateNav,80);},{passive:true});
+
+/* Sheets */
+const sheet=document.getElementById('sheet'), panel=document.getElementById('panel'), driver=document.getElementById('driver');
+function openSheet(h){panel.innerHTML='<button class="close" data-act="close" type="button" aria-label="סגירה">✕</button>'+h;sheet.hidden=false;panel.scrollTop=0;}
+function closeSheet(){sheet.hidden=true;panel.innerHTML='';}
+
+function openDetails(id){
+  const e=ev(id); if(!e)return;
+  const st=s=>`<button class="b ${e.status===s?'on':''}" data-act="status" data-id="${e.id}" data-st="${s}" type="button">${{done:'היה',cancelled:'בוטל',changed:'השתנה'}[s]}</button>`;
+  openSheet(`<h3>${esc(e.title)}</h3>
+    <div class="m">${esc(e.local)} · <span dir="ltr">${esc(e.time)}</span> · ${esc(dayLabel(e.date))}</div>
+    ${e.address?`<p class="m">מיקום: <span dir="ltr">${esc(e.address)}</span></p>`:''}
+    ${e.details?`<p>${esc(e.details)}</p>`:''}
+    <div class="btns">${st('done')}${st('changed')}${st('cancelled')}</div>
+    ${e.cancelPolicy?`<p class="more" style="margin-top:.6rem"><b>מדיניות ביטול:</b> ${esc(e.cancelPolicy)}</p>`:''}
+    ${e.replaces?`<div class="btns"><button class="b r" data-act="undoSwap" data-id="${e.id}" type="button">ביטול ההחלפה, חזרה ל${esc((ev(e.replaces)||{}).title||'תחנה המקורית')}</button></div>`:
+      (e.status!=='cancelled'&&e.status!=='done'&&data.alternatives.some(a=>a.city===dayCity(dayOf(e.date)||{})&&!a.used))?`<div class="btns"><button class="b g" data-act="swap" data-id="${e.id}" type="button">החלפה בחלופה</button></div>`:''}
+    <h4>מה באמת עשיתי</h4>
+    <textarea id="noteBox" data-id="${e.id}" placeholder="רשמים, מחשבות, מה היה שונה מהתוכנית">${esc(e.note)}</textarea>
+    <div class="saved" id="noteSaved">הרשמים נשמרים אוטומטית תוך כדי כתיבה</div>
+    <h4>תמונות</h4>
+    ${e.photos.length?`<div class="thumbs">${e.photos.map(p=>`<button data-act="photo" data-id="${e.id}" data-pid="${p.id}" type="button" aria-label="הצגת התמונה">${photoImg(p)}</button>`).join('')}</div>`:'<div class="locline">עוד אין תמונות בתחנה הזו.</div>'}
+    <div class="btns"><button class="b" data-act="addPhoto" data-id="${e.id}" type="button">+ צירוף תמונה</button></div>
+    <div class="saved" id="photoMsg"></div>
+    <h4>מיקום על המפה</h4>
+    <div class="locline">${e.lat!==undefined&&e.lat!==''&&e.lat!==null?'נשמר מיקום ✓':'עוד לא נשמר מיקום. בלי מיקום, התחנה לא תופיע במפת היום.'}</div>
+    <div class="btns"><button class="b" data-act="myLoc" data-id="${e.id}" type="button">המיקום שלי עכשיו</button></div>
+    <div class="saved" id="locMsg"></div>
+    ${e.bgShort?`<h4>רקע</h4><p>${esc(e.bgShort)}</p>`:''}
+    ${e.bgMore?`<details class="more"><summary><b>פרטים מעניינים</b></summary><p>${esc(e.bgMore)}</p></details>`:''}
+    ${e.sources?`<div class="src">${esc(e.sources)}</div>`:''}
+    <div class="btns" style="margin-top:1rem">
+      <button class="b" data-act="driver" data-id="${e.id}" type="button">הצגה לנהג</button>
+      <button class="b" data-act="edit" data-id="${e.id}" type="button">עריכה</button>
+    </div>`);
+  hydratePhotos(panel);
+}
+
+/* Photos: add, view, delete */
+const photoInput=document.getElementById('photoInput');
+photoInput.addEventListener('change',async()=>{
+  const e=ev(photoInput.dataset.id), files=[...photoInput.files]; photoInput.value='';
+  if(!e||!files.length)return;
+  const msg=document.getElementById('photoMsg'); if(msg)msg.textContent='מקטינה ושומרת…';
+  let ok=0;
+  for(const f of files){
+    try{
+      const r=await resizeImage(f), pid='p'+uid();
+      await photoPut(pid,r.url);
+      e.photos.push({id:pid,name:f.name,taken:f.lastModified?new Date(f.lastModified).toISOString():'',w:r.w,h:r.h,added:stamp()});
+      ok++;
+    }catch(err){if(msg)msg.textContent='⚠ לא הצלחתי לשמור את '+f.name+'. ייתכן שהמקום בדפדפן התמלא.';}
+  }
+  if(ok){e.updated=stamp();save();render(true);openDetails(e.id);
+    const m2=document.getElementById('photoMsg'); if(m2)m2.textContent=(ok===1?'התמונה נשמרה ✓':ok+' תמונות נשמרו ✓');}
+});
+async function openPhoto(id,pid){
+  const e=ev(id), p=e&&e.photos.find(x=>x.id===pid); if(!p)return;
+  const u=await photoGet(pid);
+  const when=p.taken?new Date(p.taken).toLocaleString('he-IL',{day:'numeric',month:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+  driver.innerHTML=`<div class="photoview">${u?`<img src="${u}" alt="${esc(p.name)}">`:'<p>התמונה לא נמצאה במכשיר הזה.</p>'}</div>
+    <div class="he" dir="ltr">${esc(p.name)}</div>${when?`<div class="he">תאריך הקובץ: ${esc(when)}</div>`:''}
+    <div class="btns" style="width:100%;max-width:22rem"><button class="b r" data-act="delPhoto" data-id="${id}" data-pid="${pid}" type="button">מחיקת התמונה</button>
+    <button class="b p" data-act="closeDriver" type="button">סגירה</button></div>`;
+  driver.hidden=false;
+}
+
+/* Current location for a stop */
+function myLocation(id){
+  const e=ev(id), msg=document.getElementById('locMsg'); if(!e)return;
+  if(!navigator.geolocation){if(msg)msg.textContent='⚠ הדפדפן הזה לא תומך באיתור מיקום.';return;}
+  if(msg)msg.textContent='מאתרת מיקום…';
+  navigator.geolocation.getCurrentPosition(p=>{
+    e.lat=+p.coords.latitude.toFixed(6);e.lng=+p.coords.longitude.toFixed(6);e.updated=stamp();save();render(true);openDetails(id);
+    const m=document.getElementById('locMsg');if(m)m.textContent='המיקום נשמר ✓ (דיוק של כ-'+Math.round(p.coords.accuracy)+' מטר)';
+  },err=>{
+    const m=document.getElementById('locMsg');if(!m)return;
+    m.textContent=err.code===1?'⚠ אין הרשאה למיקום. כשהקובץ נפתח מהתיקייה, הדפדפן לפעמים חוסם את זה. אחרי ההתקנה זה אמור לעבוד.':
+      err.code===3?'⚠ איתור המיקום לקח יותר מדי זמן. כדאי לנסות שוב במקום פתוח.':'⚠ לא הצלחתי לקבל מיקום.';
+  },{enableHighAccuracy:true,timeout:15000,maximumAge:60000});
+}
+
+/* Day map (needs internet for the map itself) */
+let leafletP=null;
+function loadLeaflet(){
+  if(window.L)return Promise.resolve();
+  if(leafletP)return leafletP;
+  leafletP=new Promise((res,rej)=>{
+    const css=document.createElement('link');css.rel='stylesheet';css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';document.head.appendChild(css);
+    const s=document.createElement('script');s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    s.onload=()=>res();s.onerror=()=>{leafletP=null;rej(new Error('offline'));};document.head.appendChild(s);
+  });
+  return leafletP;
+}
+async function openDayMap(ds){
+  const day=dayOf(ds), evs=eventsOf(ds).filter(e=>e.status!=='cancelled');
+  const withLoc=evs.filter(e=>e.lat!==undefined&&e.lat!==''&&e.lat!==null);
+  const list=evs.map((e,i)=>`<li>${i+1}. ${esc(e.title)} · <span dir="ltr">${esc(e.time)}</span>${withLoc.includes(e)?'':' (אין מיקום)'}</li>`).join('');
+  openSheet(`<h3>מפת היום</h3><div class="m">${esc(dayLabel(ds))} · ${esc(day.title)}</div>
+    ${withLoc.length?'<div class="mapwrap" id="dayMap"></div>':'<p class="locline" style="margin-top:.6rem">לתחנות של היום הזה עוד אין מיקום. אפשר לשמור מיקום בכל תחנה עם הכפתור "המיקום שלי עכשיו".</p>'}
+    <div class="saved" id="mapMsg"></div><ol style="padding-inline-start:1.2rem;margin:.6rem 0 0;list-style:none">${list}</ol>`);
+  if(!withLoc.length)return;
+  try{await loadLeaflet();}catch(err){
+    document.getElementById('dayMap').remove();
+    const m=document.getElementById('mapMsg');if(m)m.textContent='⚠ אין חיבור לאינטרנט, לכן אי אפשר להציג את המפה. רשימת התחנות למטה.';return;
+  }
+  const el=document.getElementById('dayMap'); if(!el)return;
+  const map=L.map(el,{zoomControl:true});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+  const today=iso(new Date()), curE=ds===today?currentStop(evs,nowHM()).cur:null;
+  const pts=[];
+  for(const e of withLoc){
+    const n=evs.indexOf(e)+1, cls=e===curE?'cur':e.status==='done'?'done':'';
+    const icon=L.divIcon({className:'',html:`<div class="numpin ${cls}">${n}</div>`,iconSize:[30,30],iconAnchor:[15,15]});
+    const ph=e.photos.length?await photoGet(e.photos[e.photos.length-1].id):null;
+    L.marker([e.lat,e.lng],{icon}).addTo(map).bindPopup(`<div class="pop"><b>${esc(e.title)}</b><br><span dir="ltr">${esc(e.time)}</span> · ${esc(e.local)}${ph?`<img src="${ph}" alt="">`:''}</div>`);
+    pts.push([e.lat,e.lng]);
+  }
+  if(pts.length>1)L.polyline(pts,{color:'#6B3FA0',weight:4,dashArray:'2 10',lineCap:'round'}).addTo(map);
+  if(pts.length===1)map.setView(pts[0],15);else map.fitBounds(pts,{padding:[30,30]});
+  setTimeout(()=>map.invalidateSize(),150);
+}
+
+function openEdit(id,date){
+  const e=id?ev(id):{id:null,date,time:'12:00',title:'',local:'',address:'',details:'',bgShort:'',bgMore:'',travelMode:'walk',travelMin:'',travelEst:false};
+  const opt=v=>`<option value="${v}" ${e.travelMode===v?'selected':''}>${MODE[v].name}</option>`;
+  openSheet(`<h3>${id?'עריכת תחנה':'תחנה חדשה'}</h3>
+    <form id="evForm">
+      <label class="f">שם התחנה<input name="title" id="f_title" value="${esc(e.title)}" required></label>
+      <label class="f">השם בשפה המקומית<input name="local" id="f_local" value="${esc(e.local)}" dir="ltr"></label>
+      <div class="pair">
+        <label class="f">תאריך<input type="date" name="date" id="f_date" value="${esc(e.date)}" required></label>
+        <label class="f">שעה<input type="time" name="time" id="f_time" value="${esc(e.time)}" required></label>
+      </div>
+      <label class="f">כתובת (מוצגת לנהג ומשמשת לחישוב המסלול)<input name="address" id="f_address" value="${esc(e.address)}" dir="ltr"></label>
+      <div class="pair">
+        <label class="f">הגעה מהתחנה הקודמת<select name="travelMode" id="f_travelMode">${opt('walk')}${opt('transit')}${opt('car')}</select></label>
+        <label class="f">זמן נסיעה (דקות)<input type="number" min="0" max="600" name="travelMin" id="f_travelMin" value="${esc(e.travelMin)}" inputmode="numeric"></label>
+      </div>
+      <label class="f">פרטים<textarea name="details" id="f_details">${esc(e.details)}</textarea></label>
+      <label class="f">רקע קצר<textarea name="bgShort" id="f_bgShort">${esc(e.bgShort)}</textarea></label>
+      <label class="f">פרטים מעניינים<textarea name="bgMore" id="f_bgMore">${esc(e.bgMore)}</textarea></label>
+      <label class="f">מדיניות ביטול (להזמנות מראש)<input name="cancelPolicy" id="f_cancelPolicy" value="${esc(e.cancelPolicy||'')}"></label>
+      <div class="btns" style="margin-top:1rem"><button class="b p" type="submit">שמירה</button>
+      ${id?`<button class="b r" type="button" data-act="del" data-id="${id}">מחיקה</button>`:''}</div>
+    </form>`);
+  document.getElementById('evForm').onsubmit=x=>{
+    x.preventDefault();
+    const f=Object.fromEntries(new FormData(x.target).entries());
+    if(id){
+      const travelChanged=f.travelMin!==String(e.travelMin)||f.travelMode!==e.travelMode;
+      const oldDate=e.date;
+      Object.assign(e,f,{updated:stamp()}); if(travelChanged){e.travelEst=false;e.travelStale=false;const p=prevActive(e);e.travelFrom=p?p.id:null;}
+      touchDay(oldDate);
+    }else{
+      data.events.push(Object.assign({id:uid(),sources:'',status:'planned',note:'',travelEst:false,photos:[],updated:stamp()},f));
+      if(!dayOf(f.date))data.days.push({date:f.date,title:'יום חדש',sub:'',type:'city',summary:'',updated:stamp(),exported:''});
+    }
+    save();closeSheet();render(true);
+  };
+}
+
+function openSummary(ds){
+  const day=dayOf(ds); if(!day)return;
+  openSheet(`<h3>סיכום היום</h3><div class="m">${esc(dayLabel(day.date))} · ${esc(day.title)}</div>
+    <textarea id="sumBox" data-date="${esc(day.date)}" style="min-height:12rem;margin-top:.6rem" placeholder="איך היה היום? מה זכור במיוחד?">${esc(day.summary)}</textarea>
+    <div class="saved" id="sumSaved">הסיכום נשמר אוטומטית תוך כדי כתיבה</div>`);
+}
+
+function openDriver(id){
+  const e=ev(id); if(!e)return;
+  driver.innerHTML=`<div class="big">${esc(e.local||e.title)}</div>${e.address?`<div class="addr">${esc(e.address)}</div>`:''}
+    <div class="he">${esc(e.title)}</div><button class="b p" data-act="closeDriver" type="button" style="flex:none;min-width:10rem">סגירה</button>`;
+  driver.hidden=false;
+}
+
+/* Alternatives: browse per city, swap into a stop's time slot, undo */
+function altById(aid){return data.alternatives.find(a=>a.id===aid);}
+function hasLoc(x){return x&&x.lat!==undefined&&x.lat!==null&&x.lat!=='';}
+/* Straight-line distance in km (haversine) */
+function kmBetween(a,b){
+  const R=6371,r=Math.PI/180,dLat=(b.lat-a.lat)*r,dLng=(b.lng-a.lng)*r;
+  const h=Math.sin(dLat/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(h));
+}
+function fmtKm(k){return k<1?'כ-'+(Math.round(k*10)*100)+' מטר':'כ-'+(k<10?k.toFixed(1):Math.round(k))+' ק״מ';}
+function altsFor(city,origin){
+  const list=data.alternatives.filter(a=>a.city===city&&!a.used).map(a=>({a,d:(hasLoc(origin)&&hasLoc(a))?kmBetween(origin,a):null}));
+  return list.sort((x,y)=>((y.a.indoor?1:0)-(x.a.indoor?1:0))||((x.d===null)-(y.d===null))||((x.d||0)-(y.d||0)));
+}
+function altSections(city,renderOne,origin){
+  const list=altsFor(city,origin), inn=list.filter(x=>x.a.indoor), out=list.filter(x=>!x.a.indoor);
+  const one=x=>renderOne(x.a,x.d===null?'':fmtKm(x.d)+' בקו אווירי');
+  return (inn.length?`<h4>מקורה</h4>${inn.map(one).join('')}`:'')+(out.length?`<h4>בחוץ</h4>${out.map(one).join('')}`:'')
+    +(list.length?'':'<p class="locline">לא נשארו חלופות לעיר הזו.</p>');
+}
+/* The point distances are measured from: the stop before the one being replaced (where you will leave from) */
+function originFor(e){
+  const act=eventsOf(e.date).filter(v=>v.status!=='cancelled'||v===e), i=act.indexOf(e);
+  for(let k=i-1;k>=0;k--){if(hasLoc(act[k]))return act[k];}
+  return hasLoc(e)?e:null;
+}
+function originForDay(ds){
+  const act=eventsOf(ds).filter(v=>v.status!=='cancelled');
+  const cur=ds===iso(new Date())?currentStop(act,nowHM()).cur:null;
+  if(cur)return originFor(cur)||(hasLoc(cur)?cur:null);
+  return act.find(hasLoc)||null;
+}
+function openAlts(ds){
+  const day=dayOf(ds), city=dayCity(day), origin=originForDay(ds);
+  openSheet(`<h3>חלופות ב${esc(city)}</h3>
+    <div class="m">כדי להחליף תחנה: פותחים את התחנה ולוחצים "החלפה בחלופה".</div>
+    ${origin?`<div class="locline">המרחקים מחושבים מ: <b>${esc(origin.title)}</b></div>`:''}
+    ${altSections(city,(a,dist)=>`<details class="more"><summary><b>${esc(a.title)}</b> · <span dir="ltr">${esc(a.local)}</span>${dist?` · <span class="locline">${dist}</span>`:''}</summary>
+      ${a.details?`<p>${esc(a.details)}</p>`:''}${a.bgShort?`<p>${esc(a.bgShort)}</p>`:''}${a.bgMore?`<p class="locline">${esc(a.bgMore)}</p>`:''}
+      ${a.address?`<p class="locline" dir="ltr">${esc(a.address)}</p>`:''}</details>`,origin)}`);
+}
+function openSwap(id){
+  const e=ev(id), city=dayCity(dayOf(e.date)), origin=originFor(e);
+  openSheet(`<h3>החלפה בחלופה</h3>
+    <div class="m">במקום: <b>${esc(e.title)}</b> · <span dir="ltr">${esc(e.time)}</span></div>
+    ${origin?`<div class="locline">ממוין לפי מרחק מ: <b>${esc(origin.title)}</b>${origin===e?' (אין תחנה קודמת עם מיקום)':''}</div>`:'<div class="locline">אין מיקום שמור לתחנות של היום, לכן החלופות לא ממוינות לפי מרחק.</div>'}
+    ${e.cancelPolicy?`<p class="more" style="margin-top:.6rem;border:2px solid var(--gold)"><b>שימי לב, מדיניות ביטול:</b> ${esc(e.cancelPolicy)}</p>`:''}
+    ${altSections(city,(a,dist)=>`<button class="stop" style="width:100%;margin-top:.4rem;border:2px solid var(--lilac-light)" data-act="pickAlt" data-id="${e.id}" data-aid="${a.id}" type="button">
+      <span class="t">${esc(a.title)}</span><span class="m">${dist?`<b>${dist}</b> · `:''}${esc(a.local)}${a.details?' · '+esc(a.details):''}</span></button>`,origin)}`);
+}
+function confirmSwap(id,aid){
+  const e=ev(id), a=altById(aid);
+  openSheet(`<h3>להחליף?</h3>
+    <p><b>${esc(e.title)}</b> יסומן "הוחלף", ובמקומו בשעה <span dir="ltr">${esc(e.time)}</span> ייכנס <b>${esc(a.title)}</b>.</p>
+    <p class="locline">אפשר לבטל את ההחלפה אחר כך מתוך הפרטים של החלופה.</p>
+    ${e.cancelPolicy?`<p class="more"><b>מדיניות ביטול של ${esc(e.title)}:</b> ${esc(e.cancelPolicy)}<br>ההחלפה באפליקציה לא מבטלת את ההזמנה מול הספק.</p>`:''}
+    <div class="btns" style="margin-top:1rem"><button class="b g" data-act="doSwap" data-id="${e.id}" data-aid="${a.id}" type="button">כן, להחליף</button>
+    <button class="b" data-act="swap" data-id="${e.id}" type="button">חזרה לרשימה</button></div>`);
+}
+function doSwap(id,aid){
+  const e=ev(id), a=altById(aid), day=dayOf(e.date); if(!e||!a)return;
+  const n=Object.assign({id:uid(),date:e.date,time:e.time,title:a.title,local:a.local,address:a.address,details:a.details,bgShort:a.bgShort,bgMore:a.bgMore,sources:a.sources,
+    status:'planned',note:'',travelMode:day.type==='nature'?'car':'walk',travelMin:'',travelEst:false,photos:[],replaces:e.id,altId:a.id,updated:stamp()},
+    (a.lat!==undefined)?{lat:a.lat,lng:a.lng}:{});
+  e.status='cancelled';e.replacedBy=n.id;e.updated=stamp();a.used=true;data.events.push(n);
+  const act=eventsOf(e.date).filter(v=>v.status!=='cancelled'), nxt=act[act.indexOf(n)+1];
+  if(nxt&&nxt.travelMin){nxt.travelStale=true;nxt.updated=stamp();n.staleNext=nxt.id;}
+  touchDay(e.date);save();closeSheet();render(true);
+}
+function undoSwap(nid){
+  const n=ev(nid); if(!n)return;
+  const o=ev(n.replaces), a=altById(n.altId);
+  if(o){o.status='planned';delete o.replacedBy;o.updated=stamp();}
+  if(a)a.used=false;
+  if(n.staleNext){const x=ev(n.staleNext);if(x){x.travelStale=false;x.updated=stamp();}}
+  n.photos.forEach(p=>photoDel(p.id));
+  data.events=data.events.filter(v=>v.id!==nid);
+  touchDay(n.date);save();closeSheet();render(true);
+}
+
+/* Autosave while typing */
+let typingTimer=null;
+function saveTyping(){
+  const nb=document.getElementById('noteBox'), sb=document.getElementById('sumBox');
+  if(nb){const e=ev(nb.dataset.id); if(e&&e.note!==nb.value){e.note=nb.value;e.updated=stamp();save();
+    const s=document.getElementById('noteSaved'); if(s)s.textContent=storageOK?'נשמר ✓ '+lastSaved:'⚠ לא נשמר';}}
+  if(sb){const d=dayOf(sb.dataset.date); if(d&&d.summary!==sb.value){d.summary=sb.value;d.updated=stamp();save();
+    const s=document.getElementById('sumSaved'); if(s)s.textContent=storageOK?'נשמר ✓ '+lastSaved:'⚠ לא נשמר';}}
+}
+document.addEventListener('input',x=>{
+  if(x.target.id==='noteBox'||x.target.id==='sumBox'){clearTimeout(typingTimer);typingTimer=setTimeout(saveTyping,500);}
+});
+
+/* Export */
+function fileStamp(){const n=new Date(),z=v=>String(v).padStart(2,'0');return iso(n)+'-'+z(n.getHours())+z(n.getMinutes());}
+async function dayPayload(day){
+  const evs=[];
+  for(const e of eventsOf(day.date)){
+    const photos=[];
+    for(const p of e.photos){photos.push(Object.assign({},p,{data:await photoGet(p.id)}));}
+    evs.push(Object.assign({},e,{photos}));
+  }
+  return Object.assign({},day,{events:evs});
+}
+async function exportDay(ds){
+  saveTyping();
+  const days=sortedDays(),i=days.findIndex(d=>d.date===ds),day=days[i];
+  const name='trip-day'+(i+1)+'-'+day.date+'-'+device()+'.json';
+  const payload={app:'trip-app',version:3,kind:'day',exported:stamp(),device:deviceHe(),dayNumber:i+1,day:await dayPayload(day)};
+  shareFile(JSON.stringify(payload,null,2),name,()=>{dayOf(ds).exported=stamp();save();render(true);});
+}
+async function exportAll(){
+  saveTyping();
+  const name='trip-all-days-'+fileStamp()+'-'+device()+'.json';
+  const all=[];for(const d of sortedDays())all.push(await dayPayload(d));
+  const payload={app:'trip-app',version:3,kind:'trip',exported:stamp(),device:deviceHe(),days:all,alternatives:data.alternatives};
+  shareFile(JSON.stringify(payload,null,2),name,()=>{const t=stamp();data.days.forEach(d=>d.exported=t);save();render(true);});
+}
+function shareFile(text,name,onDone){
+  const blob=new Blob([text],{type:'application/json'});
+  try{
+    const file=new File([blob],name,{type:'application/json'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      navigator.share({files:[file],title:name}).then(onDone).catch(err=>{if(err&&err.name==='AbortError')return;downloadBlob(blob,name);onDone();});
+      return;
+    }
+  }catch(e){}
+  downloadBlob(blob,name);onDone();
+}
+function downloadBlob(blob,name){
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;
+  document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
+}
+
+document.addEventListener('click',x=>{
+  const t=x.target.closest('[data-act]');
+  if(!t){if(x.target===sheet){saveTyping();closeSheet();}return;}
+  const a=t.dataset.act,id=t.dataset.id,ds=t.dataset.date;
+  saveTyping();
+  if(a==='details')openDetails(id);
+  else if(a==='addPhoto'){photoInput.dataset.id=id;photoInput.click();}
+  else if(a==='photo')openPhoto(id,t.dataset.pid);
+  else if(a==='delPhoto'){
+    if(t.dataset.sure){const e=ev(id);e.photos=e.photos.filter(p=>p.id!==t.dataset.pid);photoDel(t.dataset.pid);e.updated=stamp();save();driver.hidden=true;render(true);if(!sheet.hidden)openDetails(id);}
+    else{t.dataset.sure='1';t.textContent='בטוחה? למחוק';}
+  }
+  else if(a==='alts')openAlts(ds);
+  else if(a==='swap')openSwap(id);
+  else if(a==='pickAlt')confirmSwap(id,t.dataset.aid);
+  else if(a==='doSwap')doSwap(id,t.dataset.aid);
+  else if(a==='undoSwap'){
+    if(t.dataset.sure)undoSwap(id);
+    else{t.dataset.sure='1';t.textContent='בטוחה? לחיצה נוספת תבטל את ההחלפה';}
+  }
+  else if(a==='myLoc')myLocation(id);
+  else if(a==='dayMap')openDayMap(ds);
+  else if(a==='reset'){
+    if(t.dataset.sure){try{localStorage.removeItem(KEY);}catch(e){}photoClearAll();data=sample();save();render();scrollToFocus();}
+    else{t.dataset.sure='1';t.textContent='בטוחה? כל מה שכתבת יימחק מהמכשיר הזה (לחיצה נוספת לאישור)';}
+  }
+  else if(a==='travel')openTravel(id);
+  else if(a==='driver')openDriver(id);
+  else if(a==='closeDriver')driver.hidden=true;
+  else if(a==='close')closeSheet();
+  else if(a==='edit')openEdit(id);
+  else if(a==='add')openEdit(null,ds);
+  else if(a==='summary')openSummary(ds);
+  else if(a==='exportDay')exportDay(ds);
+  else if(a==='exportAll')exportAll();
+  else if(a==='done'){const e=ev(id);e.status='done';e.updated=stamp();save();render(true);}
+  else if(a==='status'){const e=ev(id);e.status=(e.status===t.dataset.st)?'planned':t.dataset.st;e.updated=stamp();save();render(true);openDetails(id);}
+  else if(a==='del'){
+    if(t.dataset.sure){const e=ev(id);touchDay(e.date);data.events=data.events.filter(v=>v.id!==id);save();closeSheet();render(true);}
+    else{t.dataset.sure='1';t.textContent='בטוחה? למחוק לגמרי';}
+  }
+});
+document.addEventListener('keydown',x=>{if(x.key==='Escape'){saveTyping();if(!driver.hidden)driver.hidden=true;else if(!sheet.hidden)closeSheet();}});
+document.getElementById('prevDay').onclick=()=>jumpDay(-1);
+document.getElementById('nextDay').onclick=()=>jumpDay(1);
+document.getElementById('sizeBtn').onclick=()=>{
+  const order=['big','large','huge'],cur=document.documentElement.dataset.size||'large';
+  setSize(order[(order.indexOf(cur)+1)%order.length]);
+};
+
+/* Always show the saved version when the page comes back into view */
+function refresh(){load();render(true);}
+/* Opening position: always start at today's current stop. The browser's own scroll memory is switched off,
+   and the jump is repeated after fonts load (which shifts the layout) unless the user already started scrolling.
+   Coming back after more than 2 minutes away also returns to today's stop. */
+try{history.scrollRestoration='manual';}catch(e){}
+let userScrolled=false, hiddenAt=0;
+['touchstart','wheel','keydown'].forEach(t=>window.addEventListener(t,()=>{userScrolled=true;},{passive:true,once:true}));
+function focusIfIdle(){if(!userScrolled)scrollToFocus();}
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){saveTyping();hiddenAt=Date.now();}
+  else{refresh();if(hiddenAt&&Date.now()-hiddenAt>120000)scrollToFocus();}
+});
+window.addEventListener('pagehide',saveTyping);
+window.addEventListener('pageshow',x=>{if(x.persisted){refresh();scrollToFocus();}});
+window.addEventListener('load',focusIfIdle);
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(focusIfIdle);
+setInterval(()=>{if(sheet.hidden)render(true);},60000);
+
+/* Install and offline support: register the offline helper, and offer a refresh when a new version arrives */
+if('serviceWorker' in navigator && location.protocol==='https:'){
+  navigator.serviceWorker.register('./sw.js').then(reg=>{
+    const offer=w=>{
+      if(document.getElementById('updBar'))return;
+      const b=document.createElement('div');b.id='updBar';
+      b.style.cssText='position:fixed;left:16px;right:16px;bottom:calc(4.5rem + env(safe-area-inset-bottom,0px));z-index:40;background:#4A2063;color:#fff;border-radius:1rem;padding:.6rem .8rem;display:flex;gap:.6rem;align-items:center;justify-content:space-between;font-size:.9rem';
+      b.innerHTML='<span>יש גרסה חדשה של האפליקציה</span><button class="b g" type="button" style="flex:none">עדכון עכשיו</button>';
+      b.querySelector('button').onclick=()=>{saveTyping();w.postMessage('skipWaiting');};
+      document.body.appendChild(b);
+    };
+    if(reg.waiting&&navigator.serviceWorker.controller)offer(reg.waiting);
+    reg.addEventListener('updatefound',()=>{const w=reg.installing;if(!w)return;
+      w.addEventListener('statechange',()=>{if(w.state==='installed'&&navigator.serviceWorker.controller)offer(w);});});
+    setInterval(()=>reg.update().catch(()=>{}),30*60*1000);
+  }).catch(()=>{});
+  let reloaded=false;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(reloaded)return;reloaded=true;location.reload();});
+}
+
+loadSize();load();render();scrollToFocus();updateNav();
+setTimeout(focusIfIdle,300);
+</script>
+</body>
+</html>

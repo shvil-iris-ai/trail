@@ -1,0 +1,18 @@
+{
+  "name": "שביל – הטיול שלי",
+  "short_name": "שביל",
+  "description": "אפליקציית טיולים: ציר זמן, יומן וספר זיכרונות. נבנתה על ידי איריס, בעזרת Claude.",
+  "lang": "he",
+  "dir": "rtl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FCFBFD",
+  "theme_color": "#6B3FA0",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
