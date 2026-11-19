@@ -638,7 +638,7 @@ function render(keepScroll){
     html+='</div></section>';
   });
   html+=`<div class="testline">${storageOK?'שמירה במכשיר פעילה ✓'+(lastSaved?' · נשמר '+lastSaved:''):'⚠ השמירה במכשיר לא זמינה בדפדפן הזה'} · ${esc(browserName())} · ${deviceHe()}
-    <br>נבנתה על ידי איריס, בעזרת Claude · גרסה 18</div>`;
+    <br>נבנתה על ידי איריס, בעזרת Claude · גרסה 19</div>`;
   document.getElementById('main').innerHTML=html;
   hydratePhotos(document.getElementById('main'));
   if(keepScroll)window.scrollTo(0,y);
@@ -887,7 +887,8 @@ function openTrips(){
   const sec=(k,l)=>groups[k].length?`<h4>${l}</h4><div class="triplist">${groups[k].map(item).join('')}</div>`:'';
   openSheet(`<h3>הטיולים שלי</h3>${sec('now','עכשיו')}${sec('soon','בקרוב')}${sec('past','היו')}
     <div class="btns" style="margin-top:1rem"><button class="b g" data-act="newTrip" type="button">+ טיול חדש</button>
-    <button class="b" data-act="importTrip" type="button">טעינת טיול מקובץ</button></div>
+    <button class="b" data-act="importTrip" type="button">טעינת טיול מקובץ</button>
+    <button class="b" data-act="pasteTrip" type="button">הדבקת טיול כטקסט</button></div>
     ${RO?'':'<div class="btns"><button class="b" data-act="updateTrip" type="button">עדכון הטיול הפתוח מקובץ</button></div><p class="locline">מוסיף רקע ופרטים לטיול הפתוח, בלי לגעת בהערות, בסימונים ובתמונות שלך.</p>'}
     <div class="saved" id="importMsg"></div>`);
 }
@@ -941,21 +942,88 @@ function openTripEdit(){
 }
 /* Load a trip from a file made by "export whole trip" (or a trip file prepared for you) */
 const importInput=document.getElementById('importInput');
+/* Accepts a file exported by the app, or a trip file written by an AI from the guide: missing ids and fields are filled in */
+const S=v=>(v===undefined||v===null)?'':String(v);
+function hm(v){const m=S(v).match(/^(\d{1,2})[:.](\d{2})/);return m?String(Math.min(23,+m[1])).padStart(2,'0')+':'+m[2]:'';}
+function cleanTrip(p){
+  if(!p||typeof p!=='object')throw new Error('not');
+  if(p.app&&p.app!=='trip-app')throw new Error('not');
+  if(p.kind==='day')return {err:'day'};
+  if(!Array.isArray(p.days)||!p.days.length)throw new Error('nodays');
+  const isDate=v=>/^\d{4}-\d{2}-\d{2}$/.test(S(v));
+  const days=[],events=[],seen=new Set(),fixes=[];
+  for(const d0 of p.days){
+    if(!isDate(d0.date)){fixes.push('יום בלי תאריך תקין דולג');continue;}
+    if(seen.has(d0.date)){fixes.push('יום כפול ב-'+d0.date+' אוחד');}
+    const d=Object.assign({},d0);delete d.events;
+    if(!seen.has(d.date)){seen.add(d.date);days.push(Object.assign({title:S(d.city)||'יום',city:'',type:'city',sub:'',summary:''},d,{type:d.type==='nature'?'nature':'city',updated:stamp(),exported:''}));}
+    for(const e0 of (d0.events||[])){
+      const e=Object.assign({},e0);
+      e.date=isDate(e.date)?e.date:d0.date;
+      e.time=hm(e.time)||'12:00';
+      e.id=S(e.id)||uid();
+      if(events.some(x=>x.id===e.id))e.id=uid();
+      const fl=e.kind==='flight';
+      if(!S(e.title))e.title=fl?(S(e.fromCode)+' ← '+S(e.toCode)):'תחנה';
+      ['local','address','phone','email','details','bgShort','bgMore','sources','cancelPolicy','note','travelNote'].forEach(k=>{e[k]=S(e[k]);});
+      if(!e.local)e.local=fl?S(e.fromName):'';
+      if(!e.address)e.address=e.local;
+      e.travelMode=['walk','car','transit'].includes(e.travelMode)?e.travelMode:'';
+      e.travelMin=/^\d+$/.test(S(e.travelMin))?S(e.travelMin):'';
+      e.travelEst=e.travelEst===undefined?true:!!e.travelEst;
+      e.status=['planned','done','cancelled','changed'].includes(e.status)?e.status:'planned';
+      if(fl){e.arrTime=hm(e.arrTime);e.arrPlusDays=S(e.arrPlusDays)==='1'?'1':'0';e.airportBuffer=/^\d+$/.test(S(e.airportBuffer))?S(e.airportBuffer):'180';
+        ['fromCode','fromName','toCode','toName','terminal','airline','flightNo','booking','seat','baggage'].forEach(k=>{e[k]=S(e[k]);});}
+      ['lat','lng','toLat','toLng'].forEach(k=>{if(e[k]!==undefined&&e[k]!==''&&!isFinite(+e[k]))delete e[k];});
+      e.updated=stamp();
+      events.push(e);
+      if(!seen.has(e.date)){seen.add(e.date);days.push({date:e.date,title:'יום',city:'',type:'city',sub:'',summary:'',updated:stamp(),exported:''});fixes.push('נוסף יום חסר ב-'+e.date);}
+    }
+  }
+  days.sort((x,y)=>x.date.localeCompare(y.date));
+  for(let i=0;i<days.length-1&&days.length<120;i++){const nx=shiftDate(days[i].date,1);
+    if(nx<days[i+1].date){days.splice(i+1,0,{date:nx,title:'יום',city:days[i].city||'',type:days[i].type||'city',sub:'',summary:'',updated:stamp(),exported:''});fixes.push('נוסף יום חסר ב-'+nx);}}
+  const stays=(p.stays||[]).filter(x=>x&&isDate(x.checkinDate)&&isDate(x.checkoutDate)&&x.checkoutDate>x.checkinDate).map(x=>{
+    const st=Object.assign({},x);st.id=S(st.id)||('s'+uid());
+    ['name','local','address','phone','email','booking','cancelPolicy','notes'].forEach(k=>{st[k]=S(st[k]);});
+    st.name=st.name||'לינה';st.checkinTime=hm(st.checkinTime)||'15:00';st.checkoutTime=hm(st.checkoutTime)||'11:00';st.updated=stamp();return st;});
+  if((p.stays||[]).length>stays.length)fixes.push('לינה בלי תאריכים תקינים דולגה');
+  const alternatives=(p.alternatives||[]).filter(a=>a&&S(a.title)).map(a=>Object.assign({},a,{id:S(a.id)||('a'+uid()),city:S(a.city),indoor:!!a.indoor,used:false,
+    local:S(a.local),address:S(a.address)||S(a.local),details:S(a.details),bgShort:S(a.bgShort),bgMore:S(a.bgMore),sources:S(a.sources)}));
+  return {meta:{name:S(p.trip&&p.trip.name)||('טיול '+(days[0]?days[0].date:'')),notes:S(p.trip&&p.trip.notes)},days,events,stays,alternatives,fixes};
+}
+/* Takes JSON even when it is wrapped in extra text or a ```json block, as AI chats often do */
+function parseTripText(t){
+  t=S(t).replace(/^﻿/,'');
+  try{return JSON.parse(t);}catch(e){}
+  const a=t.indexOf('{'),b=t.lastIndexOf('}');
+  if(a>=0&&b>a)return JSON.parse(t.slice(a,b+1));
+  throw new Error('not');
+}
+async function importTripObject(p,msg){
+  const c=cleanTrip(p);
+  if(c.err==='day'){msg('⚠ זה קובץ של יום בודד. לטעינת טיול צריך קובץ של כל הטיול.');return;}
+  for(const e of c.events){const photos=[];for(const ph of (e.photos||[])){const pid=ph.id||('p'+uid());if(ph.data){try{await photoPut(pid,ph.data);}catch(err){}}const x=Object.assign({},ph,{id:pid});delete x.data;photos.push(x);}e.photos=photos;}
+  const fixes=c.fixes;delete c.fixes;
+  createTrip(c);
+  if(fixes.length)openSheet(`<h3>הטיול נטען ✓</h3><p>${c.days.length} ימים, ${c.events.length} תחנות, ${c.stays.length} לינות.</p><h4>תיקונים שנעשו בטעינה</h4>${fixes.map(f=>`<p class="locline">${esc(f)}</p>`).join('')}`);
+}
+const importErr='⚠ לא הצלחתי לקרוא את הטיול. צריך קובץ שנוצר ב"ייצוא כל הטיול", או טיול שהוכן לפי המדריך ל-AI.';
 importInput.addEventListener('change',async()=>{
   const file=importInput.files[0];importInput.value='';if(!file)return;
-  const msg=document.getElementById('importMsg');if(msg)msg.textContent='טוענת…';
-  try{
-    const p=JSON.parse(await file.text());
-    if(p.app!=='trip-app')throw new Error('not');
-    if(p.kind!=='trip'){if(msg)msg.textContent='⚠ זה קובץ של יום בודד. לטעינת טיול צריך קובץ של כל הטיול.';return;}
-    const events=[];
-    for(const d of p.days){for(const e of (d.events||[])){
-      const photos=[];for(const ph of (e.photos||[])){const pid=ph.id||('p'+uid());if(ph.data){try{await photoPut(pid,ph.data);}catch(err){}}const c=Object.assign({},ph,{id:pid});delete c.data;photos.push(c);}
-      events.push(Object.assign({},e,{photos}));}}
-    const days=p.days.map(d=>{const c=Object.assign({},d);delete c.events;return c;});
-    createTrip({meta:{name:(p.trip&&p.trip.name)||('טיול מקובץ '+(days[0]?days[0].date:'')),notes:(p.trip&&p.trip.notes)||''},days,events,stays:p.stays||[],alternatives:p.alternatives||[]});
-  }catch(err){const m=document.getElementById('importMsg');if(m)m.textContent='⚠ לא הצלחתי לקרוא את הקובץ. צריך קובץ שנוצר בכפתור "ייצוא כל הטיול".';}
+  const msg=t=>{const m=document.getElementById('importMsg');if(m)m.textContent=t;};msg('טוענת…');
+  try{await importTripObject(parseTripText(await file.text()),msg);}catch(err){msg(importErr);}
 });
+function openPasteTrip(){
+  openSheet(`<h3>הדבקת טיול</h3><p class="locline">מדביקים כאן את מה שה-AI כתב לפי המדריך (אפשר עם הטקסט שמסביב – האפליקציה מוצאת את הטיול בתוכו).</p>
+    <textarea id="pasteTrip" rows="10" dir="ltr"></textarea>
+    <div class="btns"><button class="b p" data-act="pasteTripGo" type="button">טעינת הטיול</button></div><div class="saved" id="importMsg"></div>`);
+}
+async function pasteTripGo(){
+  const ta=document.getElementById('pasteTrip');const msg=t=>{const m=document.getElementById('importMsg');if(m)m.textContent=t;};
+  if(!ta||!ta.value.trim()){msg('⚠ התיבה ריקה.');return;}
+  try{await importTripObject(parseTripText(ta.value),msg);}catch(err){msg(importErr);}
+}
 
 /* Days: add before or after the trip, edit name, city and type, delete an empty day */
 function dayFormFields(d){
@@ -1936,8 +2004,8 @@ function mergeInto(target,src,rep,where){
 async function updateFromFile(file){
   const msg=t=>{const m=document.getElementById('importMsg');if(m)m.textContent=t;};
   try{
-    const p=JSON.parse(await file.text());
-    if(p.app!=='trip-app'||p.kind!=='trip'){msg('⚠ זה לא קובץ של טיול שלם.');return;}
+    const p=parseTripText(await file.text());
+    if((p.app&&p.app!=='trip-app')||p.kind==='day'||!Array.isArray(p.days)){msg('⚠ זה לא קובץ של טיול שלם.');return;}
     const evs=[];p.days.forEach(d=>(d.events||[]).forEach(e=>evs.push(e)));
     const known=evs.filter(e=>ev(e.id)).length+(p.stays||[]).filter(s=>stayById(s.id)).length;
     if(!known){msg('⚠ אף תחנה בקובץ לא נמצאה בטיול הפתוח. ייתכן שהקובץ שייך לטיול אחר – אפשר לטעון אותו כטיול חדש.');return;}
@@ -2042,6 +2110,8 @@ document.addEventListener('click',x=>{
   else if(a==='pasteContact')pasteContact();
   else if(a==='fillContact')fillContact(t);
   else if(a==='updateTrip')updateInput.click();
+  else if(a==='pasteTrip')openPasteTrip();
+  else if(a==='pasteTripGo')pasteTripGo();
   else if(a==='takeDiff')takeDiff(+t.dataset.i,t);
   else if(a==='takeAllDiffs'){fileDiffs.forEach((x,i)=>takeDiff(i,panel.querySelector('[data-act="takeDiff"][data-i="'+i+'"]')));t.textContent='הכול עודכן מהקובץ ✓';t.disabled=true;}
   else if(a==='sharePublish')sharePublish();
