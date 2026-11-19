@@ -638,7 +638,7 @@ function render(keepScroll){
     html+='</div></section>';
   });
   html+=`<div class="testline">${storageOK?'שמירה במכשיר פעילה ✓'+(lastSaved?' · נשמר '+lastSaved:''):'⚠ השמירה במכשיר לא זמינה בדפדפן הזה'} · ${esc(browserName())} · ${deviceHe()}
-    <br>נבנתה על ידי איריס, בעזרת Claude · גרסה 19</div>`;
+    <br>נבנתה על ידי איריס, בעזרת Claude · גרסה 20</div>`;
   document.getElementById('main').innerHTML=html;
   hydratePhotos(document.getElementById('main'));
   if(keepScroll)window.scrollTo(0,y);
@@ -810,13 +810,14 @@ function openEdit(id,date){
   openSheet(`<h3>${id?'עריכת תחנה':'תחנה חדשה'}</h3>
     <form id="evForm">
       <label class="f">שם התחנה<input name="title" id="f_title" value="${esc(e.title)}" required></label>
-      <label class="f">השם בשפה המקומית<input name="local" id="f_local" value="${esc(e.local)}" dir="ltr"></label>
+      <label class="f">השם בשפה המקומית, בכתב המקומי (מוצג לנהג)<input name="local" id="f_local" value="${esc(e.local)}" dir="auto"></label>
       <div class="pair">
         <label class="f">תאריך<input type="date" name="date" id="f_date" value="${esc(e.date)}" required></label>
         <label class="f">שעה<input type="time" name="time" id="f_time" value="${esc(e.time)}" required></label>
       </div>
       ${contactBtn('f_title','f_address','f_phone','f_email','f_details')}
-      <label class="f">כתובת (מוצגת לנהג ומשמשת לחישוב המסלול)<input name="address" id="f_address" value="${esc(e.address)}" dir="ltr"></label>
+      <label class="f">כתובת (משמשת לחישוב המסלול ב-Google Maps)<input name="address" id="f_address" value="${esc(e.address)}" dir="ltr"></label>
+      <label class="f">כתובת בשפה המקומית (לא חובה – מוצגת לנהג במקום הכתובת)<input name="localAddress" id="f_localAddress" value="${esc(e.localAddress||'')}" dir="auto"></label>
       <div class="pair"><label class="f">טלפון<input name="phone" id="f_phone" value="${esc(e.phone||'')}" dir="ltr" inputmode="tel"></label>
         <label class="f">מייל<input type="email" name="email" id="f_email" value="${esc(e.email||'')}" dir="ltr"></label></div>
       <label class="f">הגעה מהתחנה הקודמת<select name="travelMode" id="f_travelMode">${opt('walk')}${opt('transit')}${opt('car')}</select></label>
@@ -852,7 +853,7 @@ function openSummary(ds){
 }
 
 function showDriver(big,addr,he){
-  driver.innerHTML=`<div class="big">${esc(big)}</div>${addr?`<div class="addr">${esc(addr)}</div>`:''}<div class="he">${esc(he)}</div>
+  driver.innerHTML=`<div class="big" dir="auto">${esc(big)}</div>${addr?`<div class="addr" dir="auto">${esc(addr)}</div>`:''}<div class="he">${esc(he)}</div>
     <button class="b p" data-act="closeDriver" type="button" style="flex:none;min-width:10rem">סגירה</button>`;
   driver.hidden=false;
 }
@@ -965,7 +966,7 @@ function cleanTrip(p){
       if(events.some(x=>x.id===e.id))e.id=uid();
       const fl=e.kind==='flight';
       if(!S(e.title))e.title=fl?(S(e.fromCode)+' ← '+S(e.toCode)):'תחנה';
-      ['local','address','phone','email','details','bgShort','bgMore','sources','cancelPolicy','note','travelNote'].forEach(k=>{e[k]=S(e[k]);});
+      ['local','address','localAddress','phone','email','details','bgShort','bgMore','sources','cancelPolicy','note','travelNote'].forEach(k=>{e[k]=S(e[k]);});
       if(!e.local)e.local=fl?S(e.fromName):'';
       if(!e.address)e.address=e.local;
       e.travelMode=['walk','car','transit'].includes(e.travelMode)?e.travelMode:'';
@@ -973,7 +974,7 @@ function cleanTrip(p){
       e.travelEst=e.travelEst===undefined?true:!!e.travelEst;
       e.status=['planned','done','cancelled','changed'].includes(e.status)?e.status:'planned';
       if(fl){e.arrTime=hm(e.arrTime);e.arrPlusDays=S(e.arrPlusDays)==='1'?'1':'0';e.airportBuffer=/^\d+$/.test(S(e.airportBuffer))?S(e.airportBuffer):'180';
-        ['fromCode','fromName','toCode','toName','terminal','airline','flightNo','booking','seat','baggage'].forEach(k=>{e[k]=S(e[k]);});}
+        ['fromCode','fromName','fromLocal','toCode','toName','terminal','airline','flightNo','booking','seat','baggage'].forEach(k=>{e[k]=S(e[k]);});}
       ['lat','lng','toLat','toLng'].forEach(k=>{if(e[k]!==undefined&&e[k]!==''&&!isFinite(+e[k]))delete e[k];});
       e.updated=stamp();
       events.push(e);
@@ -985,7 +986,7 @@ function cleanTrip(p){
     if(nx<days[i+1].date){days.splice(i+1,0,{date:nx,title:'יום',city:days[i].city||'',type:days[i].type||'city',sub:'',summary:'',updated:stamp(),exported:''});fixes.push('נוסף יום חסר ב-'+nx);}}
   const stays=(p.stays||[]).filter(x=>x&&isDate(x.checkinDate)&&isDate(x.checkoutDate)&&x.checkoutDate>x.checkinDate).map(x=>{
     const st=Object.assign({},x);st.id=S(st.id)||('s'+uid());
-    ['name','local','address','phone','email','booking','cancelPolicy','notes'].forEach(k=>{st[k]=S(st[k]);});
+    ['name','local','address','localAddress','phone','email','booking','cancelPolicy','notes'].forEach(k=>{st[k]=S(st[k]);});
     st.name=st.name||'לינה';st.checkinTime=hm(st.checkinTime)||'15:00';st.checkoutTime=hm(st.checkoutTime)||'11:00';st.updated=stamp();return st;});
   if((p.stays||[]).length>stays.length)fixes.push('לינה בלי תאריכים תקינים דולגה');
   const alternatives=(p.alternatives||[]).filter(a=>a&&S(a.title)).map(a=>Object.assign({},a,{id:S(a.id)||('a'+uid()),city:S(a.city),indoor:!!a.indoor,used:false,
@@ -1091,6 +1092,7 @@ function openFlightEdit(id,date){
       <div class="pair"><label class="f">שדה המראה (קוד)<input name="fromCode" id="fl_fromCode" value="${esc(e.fromCode)}" dir="ltr" placeholder="TLV"></label>
         <label class="f">טרמינל<input name="terminal" id="fl_terminal" value="${esc(e.terminal)}" dir="ltr"></label></div>
       <label class="f">שם שדה ההמראה<input name="fromName" id="fl_fromName" value="${esc(e.fromName)}"></label>
+      <label class="f">שם שדה ההמראה בשפה המקומית (לא חובה – מוצג לנהג)<input name="fromLocal" id="fl_fromLocal" value="${esc(e.fromLocal||'')}" dir="auto"></label>
       <div class="pair"><label class="f">שדה נחיתה (קוד)<input name="toCode" id="fl_toCode" value="${esc(e.toCode)}" dir="ltr" placeholder="FCO"></label>
         <label class="f">שעת נחיתה<input type="time" name="arrTime" id="fl_arr" value="${esc(e.arrTime)}" required></label></div>
       <label class="f">שם שדה הנחיתה<input name="toName" id="fl_toName" value="${esc(e.toName)}"></label>
@@ -1148,9 +1150,10 @@ function openStayEdit(sid,date){
   openSheet(`<h3>${sid?'עריכת לינה':'לינה חדשה'}</h3>
     <form id="stForm">
       <label class="f">שם המלון<input name="name" id="st_name" value="${esc(st.name)}" required></label>
-      <label class="f">השם המקומי<input name="local" id="st_local" value="${esc(st.local)}" dir="ltr"></label>
+      <label class="f">השם בשפה המקומית, בכתב המקומי (מוצג לנהג)<input name="local" id="st_local" value="${esc(st.local)}" dir="auto"></label>
       ${contactBtn('st_name','st_address','st_phone','st_email','st_notes')}
-      <label class="f">כתובת (מוצגת לנהג)<input name="address" id="st_address" value="${esc(st.address)}" dir="ltr"></label>
+      <label class="f">כתובת<input name="address" id="st_address" value="${esc(st.address)}" dir="ltr"></label>
+      <label class="f">כתובת בשפה המקומית (לא חובה – מוצגת לנהג במקום הכתובת)<input name="localAddress" id="st_localAddress" value="${esc(st.localAddress||'')}" dir="auto"></label>
       <div class="pair"><label class="f">טלפון<input name="phone" id="st_phone" value="${esc(st.phone)}" dir="ltr" inputmode="tel"></label>
         <label class="f">מייל<input type="email" name="email" id="st_email" value="${esc(st.email||'')}" dir="ltr"></label></div>
       <div class="pair"><label class="f">צ׳ק-אין<input type="date" name="checkinDate" id="st_inD" value="${esc(st.checkinDate)}" required></label>
@@ -1185,8 +1188,9 @@ function stayLocation(sid){
 
 function openDriver(id){
   const e=ev(id); if(!e)return;
-  if(isFlight(e)){showDriver(e.fromName||e.fromCode,e.terminal?'Terminal '+e.terminal:'',stopTitle(e));return;}
-  driver.innerHTML=`<div class="big">${esc(e.local||e.title)}</div>${e.address?`<div class="addr">${esc(e.address)}</div>`:''}
+  if(isFlight(e)){showDriver(e.fromLocal||e.fromName||e.fromCode,'✈ '+(e.fromCode||'')+(e.terminal?' · Terminal '+e.terminal:''),stopTitle(e));return;}
+  const ad=e.localAddress||e.address;
+  driver.innerHTML=`<div class="big" dir="auto">${esc(e.local||e.title)}</div>${ad?`<div class="addr" dir="auto">${esc(ad)}</div>`:''}
     <div class="he">${esc(e.title)}</div><button class="b p" data-act="closeDriver" type="button" style="flex:none;min-width:10rem">סגירה</button>`;
   driver.hidden=false;
 }
@@ -1438,7 +1442,7 @@ function ask(title,body,opts){
     panel.querySelectorAll('[data-syncans]').forEach(b=>b.onclick=()=>{pendingAsk=null;res(opts[+b.dataset.syncans].v);});
   });
 }
-const FIELD_HE={title:'שם',time:'שעה',date:'תאריך',local:'שם מקומי',address:'כתובת',details:'פרטים',note:'מה באמת עשיתי',status:'מה קרה',
+const FIELD_HE={title:'שם',time:'שעה',date:'תאריך',local:'שם מקומי',address:'כתובת',localAddress:'כתובת מקומית',fromLocal:'שם השדה המקומי',email:'מייל',details:'פרטים',note:'מה באמת עשיתי',status:'מה קרה',
   travelMode:'דרך ההגעה',travelMin:'זמן ההגעה',travelNote:'פרטי המסלול',photos:'תמונות',summary:'סיכום היום',sub:'שורת משנה',type:'סוג היום',city:'עיר',
   name:'שם',notes:'הערות',phone:'טלפון',booking:'מספר הזמנה',cancelPolicy:'מדיניות ביטול',checkinDate:'תאריך כניסה',checkinTime:'שעת כניסה',
   checkoutDate:'תאריך יציאה',checkoutTime:'שעת יציאה',seat:'מושב',baggage:'כבודה',flightNo:'מספר טיסה',arrTime:'שעת נחיתה',airline:'חברת תעופה',
@@ -2179,7 +2183,7 @@ document.addEventListener('click',x=>{
   else if(a==='stay')openStay(t.dataset.sid);
   else if(a==='stayEdit')openStayEdit(t.dataset.sid);
   else if(a==='stayLoc')stayLocation(t.dataset.sid);
-  else if(a==='stayDriver'){const st=stayById(t.dataset.sid);if(st)showDriver(st.local||st.name,st.address,st.name);}
+  else if(a==='stayDriver'){const st=stayById(t.dataset.sid);if(st)showDriver(st.local||st.name,st.localAddress||st.address,st.name);}
   else if(a==='stayDel'){
     if(t.dataset.sure){data.stays=data.stays.filter(v=>v.id!==t.dataset.sid);save();closeSheet();render(true);}
     else{t.dataset.sure='1';t.textContent='בטוחה? למחוק את הלינה';}
